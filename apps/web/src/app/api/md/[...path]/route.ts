@@ -1,7 +1,4 @@
-import {
-  renderMarkdownRoute,
-  listMarkdownRoutes,
-} from "@/lib/md/registry";
+import { renderMarkdownRoute, listMarkdownRoutes } from "@/lib/md/registry";
 import {
   markdownResponse,
   markdownNotFoundResponse,
@@ -35,9 +32,7 @@ function getCatalogResponse(isHead: boolean) {
       title: r.title,
       description: r.description,
       section: r.section,
-      markdownUrl: absoluteUrl(
-        r.path === "/" ? "/index.md" : `${r.path}.md`,
-      ),
+      markdownUrl: absoluteUrl(r.path === "/" ? "/index.md" : `${r.path}.md`),
       canonicalUrl: absoluteUrl(r.path),
     })),
   };

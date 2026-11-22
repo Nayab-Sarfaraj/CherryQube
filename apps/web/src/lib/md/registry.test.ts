@@ -24,10 +24,14 @@ describe("Markdown Route Registry Coverage", () => {
         if (entry.isDirectory()) {
           if (entry.name.startsWith("(") || entry.name.startsWith("_")) {
             // Group folder or private folder
-            routes.push(...findPageRoutes(path.join(dir, entry.name), baseRoute));
+            routes.push(
+              ...findPageRoutes(path.join(dir, entry.name), baseRoute),
+            );
           } else if (entry.name !== "api") {
             const nextBase = `${baseRoute}/${entry.name}`;
-            routes.push(...findPageRoutes(path.join(dir, entry.name), nextBase));
+            routes.push(
+              ...findPageRoutes(path.join(dir, entry.name), nextBase),
+            );
           }
         } else if (entry.name === "page.tsx" || entry.name === "page.ts") {
           routes.push(baseRoute === "" ? "/" : baseRoute);
@@ -117,9 +121,9 @@ describe("Content Negotiation (shouldServeMarkdown)", () => {
         "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
       ),
     ).toBe(false);
-    expect(
-      shouldServeMarkdown("text/markdown;q=0.5, text/html;q=0.9"),
-    ).toBe(false);
+    expect(shouldServeMarkdown("text/markdown;q=0.5, text/html;q=0.9")).toBe(
+      false,
+    );
   });
 
   it("defaults to HTML on missing or wildcard-only accept header", () => {

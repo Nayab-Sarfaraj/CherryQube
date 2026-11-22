@@ -121,7 +121,8 @@ export function GreetingWebView({
       try {
         let token: string | null = null;
         for (const delayMs of [0, 500, 1_000]) {
-          if (delayMs) await new Promise((resolve) => setTimeout(resolve, delayMs));
+          if (delayMs)
+            await new Promise((resolve) => setTimeout(resolve, delayMs));
           token = await getToken();
           if (token) break;
         }
@@ -212,9 +213,7 @@ export function GreetingWebView({
           currentUrlRef.current = state.url;
           if (!isAllowed(state.url)) return;
           try {
-            if (
-              new URL(state.url).searchParams.get("nativeSession") === "1"
-            )
+            if (new URL(state.url).searchParams.get("nativeSession") === "1")
               onAuthAction({ type: "HANDOFF_READY" });
           } catch {
             // Ignore malformed WebView URLs.

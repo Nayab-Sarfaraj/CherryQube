@@ -68,10 +68,10 @@ export const resultRepository = {
           .lean()
       : null;
     const pending = item.pendingRenderId
-        ? await Render.findOne({ ...filter, _id: item.pendingRenderId })
-            .select("status input.props fileUrl posterUrl")
-            .lean()
-        : null;
+      ? await Render.findOne({ ...filter, _id: item.pendingRenderId })
+          .select("status input.props fileUrl posterUrl")
+          .lean()
+      : null;
     const render = visiblePublicRender(published, pending);
     return render ? { shareId, render } : null;
   },

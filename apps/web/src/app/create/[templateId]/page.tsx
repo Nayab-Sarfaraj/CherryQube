@@ -21,7 +21,9 @@ export async function generateMetadata({
   const theme = getTheme(template.themeId);
   const durationSec = template.scenes.reduce((acc, s) => acc + s.seconds, 0);
   const description = `${template.title} is a ${
-    template.type === "card" ? "5–8 second animated greeting card" : "video invitation"
+    template.type === "card"
+      ? "5–8 second animated greeting card"
+      : "video invitation"
   } for ${theme.label} with live browser preview and customizable message.`;
 
   return {

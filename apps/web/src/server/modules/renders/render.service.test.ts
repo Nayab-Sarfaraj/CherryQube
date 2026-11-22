@@ -120,7 +120,9 @@ describe("render safeguards", () => {
     };
     t.renders.get.mockResolvedValue(failed);
     t.renders.retryById.mockResolvedValue({ ...failed, status: "queued" });
-    await expect(t.service.retry("owner", "a".repeat(24))).resolves.toMatchObject({
+    await expect(
+      t.service.retry("owner", "a".repeat(24)),
+    ).resolves.toMatchObject({
       status: "queued",
       tier: "hd",
     });
@@ -132,7 +134,9 @@ describe("render safeguards", () => {
     const t = setup();
     const queued = { _id: "a".repeat(24), status: "queued", attempts: 1 };
     t.renders.get.mockResolvedValue(queued);
-    await expect(t.service.retry("owner", "a".repeat(24))).resolves.toBe(queued);
+    await expect(t.service.retry("owner", "a".repeat(24))).resolves.toBe(
+      queued,
+    );
     expect(t.renders.retryById).not.toHaveBeenCalled();
   });
   it("separates render hashes by owner", async () => {

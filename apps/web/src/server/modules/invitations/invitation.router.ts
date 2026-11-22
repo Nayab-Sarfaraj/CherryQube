@@ -24,12 +24,15 @@ async function withRenders(owner: string, items: Record<string, unknown>[]) {
     .filter((id): id is string => typeof id === "string");
   const renders = await renderRepository.getMany(owner, ids);
   const byId = new Map(renders.map((render) => [String(render._id), render]));
-  return items.map((item) =>
-    invitationDto(
-      item,
-      byId.get(String(item.pendingRenderId ?? item.publishedRenderId)) ?? null,
-    ),
-  );
+  return items.map((item) => {
+    const pending = item.pendingRenderId
+      ? (byId.get(String(item.pendingRenderId)) ?? null)
+      : null;
+    const published = item.publishedRenderId
+      ? (byId.get(String(item.publishedRenderId)) ?? null)
+      : null;
+    return invitationDto(item, pending, published);
+  });
 }
 
 export async function list(request: Request) {
@@ -37,7 +40,10 @@ export async function list(request: Request) {
     const owner = await requireUser();
     const { limit, cursor } = listRequest(request.url);
     const page = await invitationService.list(owner, limit, cursor);
-    return Response.json({ ...page, items: await withRenders(owner, page.items) });
+    return Response.json({
+      ...page,
+      items: await withRenders(owner, page.items),
+    });
   } catch (error) {
     return errorResponse(error);
   }

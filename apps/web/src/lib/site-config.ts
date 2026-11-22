@@ -33,7 +33,8 @@ export const siteConfig = {
       date: "2026-12-25",
       theme: "Evergreen & Cranberry",
       palette: ["Cranberry", "Pine", "Deep spruce", "Antique gold", "Ivory"],
-      flora: "Holly, hellebore, poinsettia, pine and eucalyptus sprigs, berry wreaths",
+      flora:
+        "Holly, hellebore, poinsettia, pine and eucalyptus sprigs, berry wreaths",
     },
     {
       id: "new-year",

@@ -105,7 +105,10 @@ describe("guest service", () => {
         fileUrl: "/old-video.mp4",
         posterUrl: "/old-poster.jpg",
         input: {
-          props: { ...templates[1].defaultProps, eventTitle: "Original dinner" },
+          props: {
+            ...templates[1].defaultProps,
+            eventTitle: "Original dinner",
+          },
           hostContact: { method: "email", value: "original@example.com" },
         },
       },

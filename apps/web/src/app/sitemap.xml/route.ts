@@ -10,7 +10,8 @@ export async function GET() {
 
   const urls = routes.map((r) => {
     const loc = absoluteUrl(r.path);
-    const priority = r.path === "/" ? "1.0" : r.section === "templates" ? "0.8" : "0.5";
+    const priority =
+      r.path === "/" ? "1.0" : r.section === "templates" ? "0.8" : "0.5";
     const changefreq = r.path === "/" ? "daily" : "weekly";
     return `  <url>
     <loc>${loc}</loc>

@@ -21,7 +21,10 @@ export const renderRepository = {
     await connectDb();
     return Render.findOneAndUpdate(
       { ownerClerkId, _id: id, status: "failed", attempts: { $lt: 3 } },
-      { $set: { status: "queued" }, $unset: { error: 1, startedAt: 1, attemptId: 1 } },
+      {
+        $set: { status: "queued" },
+        $unset: { error: 1, startedAt: 1, attemptId: 1 },
+      },
       { returnDocument: "after" },
     ).lean();
   },

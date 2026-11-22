@@ -24,6 +24,10 @@ const styles = StyleSheet.create({
     minHeight: 48,
     paddingHorizontal: 20,
   },
-  label: { color: mobileTheme.colors.surface, fontFamily: "Figtree_600SemiBold", fontSize: 16 },
+  label: {
+    color: mobileTheme.colors.surface,
+    fontFamily: "Figtree_600SemiBold",
+    fontSize: 16,
+  },
   pressed: { opacity: 0.82 },
 });

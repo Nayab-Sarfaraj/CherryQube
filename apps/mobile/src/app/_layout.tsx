@@ -1,6 +1,10 @@
 import { ClerkProvider } from "@clerk/expo";
 import { tokenCache } from "@clerk/expo/token-cache";
-import { Figtree_400Regular, Figtree_500Medium, Figtree_600SemiBold } from "@expo-google-fonts/figtree";
+import {
+  Figtree_400Regular,
+  Figtree_500Medium,
+  Figtree_600SemiBold,
+} from "@expo-google-fonts/figtree";
 import { Fraunces_600SemiBold } from "@expo-google-fonts/fraunces";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useFonts } from "expo-font";
@@ -16,7 +20,15 @@ import { clearCacheForUserChange } from "@/services/api/query-cache";
 WebBrowser.maybeCompleteAuthSession();
 
 function QueryProvider({ children }: { children: ReactNode }) {
-  const [client] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: 1, staleTime: 15_000 }, mutations: { retry: 0 } } }));
+  const [client] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: { retry: 1, staleTime: 15_000 },
+          mutations: { retry: 0 },
+        },
+      }),
+  );
   const { userId } = useMobileAuth();
   const previousUser = useRef<string | null | undefined>(undefined);
   useEffect(() => {
@@ -27,12 +39,48 @@ function QueryProvider({ children }: { children: ReactNode }) {
 }
 
 function Navigator() {
-  const [loaded] = useFonts({ Figtree_400Regular, Figtree_500Medium, Figtree_600SemiBold, Fraunces_600SemiBold });
-  if (!loaded) return <View style={{ flex: 1, backgroundColor: mobileTheme.colors.background }} />;
-  return <Stack screenOptions={{ headerShown: false }}><Stack.Screen name="(tabs)" /><Stack.Screen name="editor/[templateId]" options={{ animation: "slide_from_right" }} /><Stack.Screen name="(modals)/sign-in" options={{ presentation: "modal" }} /></Stack>;
+  const [loaded] = useFonts({
+    Figtree_400Regular,
+    Figtree_500Medium,
+    Figtree_600SemiBold,
+    Fraunces_600SemiBold,
+  });
+  if (!loaded)
+    return (
+      <View
+        style={{ flex: 1, backgroundColor: mobileTheme.colors.background }}
+      />
+    );
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="(tabs)" />
+      <Stack.Screen
+        name="editor/[templateId]"
+        options={{ animation: "slide_from_right" }}
+      />
+      <Stack.Screen
+        name="(modals)/sign-in"
+        options={{ presentation: "modal" }}
+      />
+    </Stack>
+  );
 }
 
 export default function RootLayout() {
-  if (!CLERK_PUBLISHABLE_KEY) return <QueryProvider><Navigator /></QueryProvider>;
-  return <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY} tokenCache={tokenCache}><QueryProvider><Navigator /></QueryProvider></ClerkProvider>;
+  if (!CLERK_PUBLISHABLE_KEY)
+    return (
+      <QueryProvider>
+        <Navigator />
+      </QueryProvider>
+    );
+  return (
+    <ClerkProvider
+      publishableKey={CLERK_PUBLISHABLE_KEY}
+      tokenCache={tokenCache}
+    >
+      <QueryProvider>
+        <Navigator />
+      </QueryProvider>
+    </ClerkProvider>
+  );
 }

@@ -35,3 +35,9 @@ export function hostedUrl(path = "/") {
   url.searchParams.set("embed", "1");
   return url.toString();
 }
+
+export function buildEditorPath(templateId: string, draftId?: string) {
+  return draftId
+    ? `/create/${templateId}?draft=${draftId}`
+    : `/create/${templateId}`;
+}

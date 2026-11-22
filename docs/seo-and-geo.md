@@ -37,6 +37,7 @@ CherryQube is designed to be fully readable by humans, search engines, and AI ag
 ```
 
 ### Core GEO & Discovery Endpoints
+
 1. **`/llms.txt`**: Standard manifest following the [llmstxt.org](https://llmstxt.org) specification. Dynamic, generated from code via [`apps/web/src/app/llms.txt/route.ts`](file:///Users/nayab.sarfaraj/Desktop/greetings-mobile/apps/web/src/app/llms.txt/route.ts).
 2. **`/llms-full.txt`**: Complete concatenation of all public pages in structured markdown via [`apps/web/src/app/llms-full.txt/route.ts`](file:///Users/nayab.sarfaraj/Desktop/greetings-mobile/apps/web/src/app/llms-full.txt/route.ts).
 3. **`/ai.txt`**: Machine-readable AI policy following [ai-visibility.org.uk v1.1.1](https://ai-visibility.org.uk) via [`apps/web/src/app/ai.txt/route.ts`](file:///Users/nayab.sarfaraj/Desktop/greetings-mobile/apps/web/src/app/ai.txt/route.ts).
@@ -49,11 +50,13 @@ CherryQube is designed to be fully readable by humans, search engines, and AI ag
 ## 2. Privacy & User Data Protection (STRICT)
 
 User-generated cards and invitations are **private by default**:
+
 - `/c/[id]` (rendered card / video result page)
 - `/i/[token]` (per-guest video invitation page)
 - `/dashboard` (creator dashboard)
 
 ### Protection Rules
+
 - **Markdown Access**: Blocked. Requesting `/c/[id].md` or `/i/[token].md` returns a markdown `404 Not Found`.
 - **Content Negotiation**: Neither route is included in `NEGOTIATION_ALLOWLIST` in `proxy.ts`.
 - **Crawlers**: `Disallow: /c/`, `Disallow: /i/`, `Disallow: /dashboard/` in `robots.txt` and `excluded:` in `ai.txt`.
@@ -68,8 +71,10 @@ User-generated cards and invitations are **private by default**:
 ### Scenario A: Adding a new public page (e.g., `/faq`, `/about`)
 
 When creating a new route:
+
 1. **Create the Page & Head Signals (`apps/web/src/app/<route>/page.tsx`)**:
    Add `generateMetadata` (or static `metadata`):
+
    ```ts
    import { siteConfig } from "@/lib/site-config";
 
@@ -82,7 +87,8 @@ When creating a new route:
        },
      },
      other: {
-       "ai-summary": "1-2 factual sentences summarizing this page for AI agents.",
+       "ai-summary":
+         "1-2 factual sentences summarizing this page for AI agents.",
      },
    };
    ```
@@ -118,7 +124,7 @@ When creating a new route:
    ```bash
    corepack pnpm -C apps/web test
    ```
-   *Note: `registry.test.ts` scans `apps/web/src/app` for all `page.tsx` files. If you add a page without registering it or listing it in `SKIPPED_ROUTES`, the test will fail!*
+   _Note: `registry.test.ts` scans `apps/web/src/app` for all `page.tsx` files. If you add a page without registering it or listing it in `SKIPPED_ROUTES`, the test will fail!_
 
 ---
 
@@ -137,9 +143,11 @@ Templates are defined in `packages/remotion/src/templates.ts`.
 ### Scenario C: Changing Brand Info, Contacts, or Pricing
 
 Never hardcode brand metadata across multiple files. All metadata is controlled in a single source of truth:
+
 - **File**: [`apps/web/src/lib/site-config.ts`](file:///Users/nayab.sarfaraj/Desktop/greetings-mobile/apps/web/src/lib/site-config.ts)
 
 Fields:
+
 - `name`: Site brand name (`CherryQube`)
 - `tagline`: Headline tagline
 - `description`: Site meta description
@@ -150,6 +158,7 @@ Fields:
 - `holidays`: Holiday themes, dates, palettes, and flora
 
 Updating this file automatically synchronizes:
+
 - Homepage markdown
 - `/llms.txt` and `/llms-full.txt`
 - `/ai.txt`
@@ -177,6 +186,7 @@ CherryQube distinguishes between search/citation bots, foundation training bots,
 ### Scenario E: Adding an Internal or Authenticated Route (e.g. `/admin`, `/settings`)
 
 If you add a private route that should **NOT** have a public markdown representation:
+
 1. Add the path pattern and documented reason to `SKIPPED_ROUTES` in `apps/web/src/lib/md/registry.ts`:
    ```ts
    {

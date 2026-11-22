@@ -4,7 +4,8 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        source: "/((?!api|_next|.*\\.(?:png|jpg|jpeg|webp|svg|css|js|woff2|mp4|md)$).*)",
+        source:
+          "/((?!api|_next|.*\\.(?:png|jpg|jpeg|webp|svg|css|js|woff2|mp4|md)$).*)",
         headers: [
           {
             key: "Link",

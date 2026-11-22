@@ -6,6 +6,7 @@ export type GuestInput = { name: string; contact?: GuestContact };
 export type Guest = GuestInput & {
   id: string;
   token: string;
+  link?: string;
   createdAt: string;
 };
 

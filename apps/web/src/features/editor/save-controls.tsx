@@ -18,7 +18,14 @@ type Props = {
   onExportRequested?: (invitationId: string, renderId: string) => void;
 };
 
-function Controls({ input, photo, initialId, invalid, embed, onExportRequested }: Props) {
+function Controls({
+  input,
+  photo,
+  initialId,
+  invalid,
+  embed,
+  onExportRequested,
+}: Props) {
   const { isLoaded, isSignedIn } = useAppAuth();
   const [quality, setQuality] = useState<ExportQuality>("free");
   const exportedRenderId = useRef<string | null>(null);
@@ -50,7 +57,11 @@ function Controls({ input, photo, initialId, invalid, embed, onExportRequested }
     );
   }, [embed, isLoaded, isSignedIn]);
   useEffect(() => {
-    if (embed && exportVideo.data && exportedRenderId.current !== exportVideo.data.id) {
+    if (
+      embed &&
+      exportVideo.data &&
+      exportedRenderId.current !== exportVideo.data.id
+    ) {
       exportedRenderId.current = exportVideo.data.id;
       onExportRequested?.(exportVideo.data.invitationId, exportVideo.data.id);
     }

@@ -99,7 +99,9 @@ function renderHome(): string {
     const { theme, durationSec, description } = getTemplateMeta(tpl);
     return [
       link(tpl.title, absoluteUrl(`/create/${tpl.id}`)),
-      tpl.type === "card" ? `Card (${durationSec}s)` : `Invitation (${durationSec}s)`,
+      tpl.type === "card"
+        ? `Card (${durationSec}s)`
+        : `Invitation (${durationSec}s)`,
       theme.label,
       description,
     ];
@@ -371,9 +373,11 @@ export function listMarkdownRoutes(): MarkdownRouteEntry[] {
   return routes;
 }
 
-export async function renderMarkdownRoute(
-  rawPath: string,
-): Promise<{ markdown: string; lastModified: Date; canonicalPath: string } | null> {
+export async function renderMarkdownRoute(rawPath: string): Promise<{
+  markdown: string;
+  lastModified: Date;
+  canonicalPath: string;
+} | null> {
   const clean = rawPath.replace(/\.md$/, "").replace(/\/$/, "") || "/";
 
   if (clean === "/" || clean === "/index") {

@@ -8,20 +8,20 @@ Animated holiday greetings and video invitations — Thanksgiving, Christmas, an
 
 ## What's inside
 
-| Package | What it does |
-|---|---|
-| `apps/web` | Next.js editor, API, public result pages, guest pages, dashboard |
-| `apps/mobile` | Expo React Native WebView shell for Android |
+| Package             | What it does                                                              |
+| ------------------- | ------------------------------------------------------------------------- |
+| `apps/web`          | Next.js editor, API, public result pages, guest pages, dashboard          |
+| `apps/mobile`       | Expo React Native WebView shell for Android                               |
 | `packages/remotion` | Compositions, scenes, themes, templates, inline-SVG florals, props schema |
-| `packages/shared` | Design tokens, mobile bridge schemas, shared types and constants |
+| `packages/shared`   | Design tokens, mobile bridge schemas, shared types and constants          |
 
 Six templates ship: a card and an invitation for each holiday theme.
 
-| Theme | Card | Invitation |
-|---|---|---|
-| Thanksgiving "Harvest" | Harvest greeting | Harvest gathering |
-| Christmas "Evergreen & Cranberry" | Evergreen wishes | Evergreen gathering |
-| New Year's Eve "Midnight & Champagne" | Midnight toast | Midnight gathering |
+| Theme                                 | Card             | Invitation          |
+| ------------------------------------- | ---------------- | ------------------- |
+| Thanksgiving "Harvest"                | Harvest greeting | Harvest gathering   |
+| Christmas "Evergreen & Cranberry"     | Evergreen wishes | Evergreen gathering |
+| New Year's Eve "Midnight & Champagne" | Midnight toast   | Midnight gathering  |
 
 Durations run about 5–8 sec for cards and 20–30 sec for invitations, with a hard 90-sec cap enforced in the template registry.
 
