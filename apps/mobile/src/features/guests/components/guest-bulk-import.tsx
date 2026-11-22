@@ -164,7 +164,7 @@ export function GuestBulkImport({
 
 const styles = StyleSheet.create({
   toggleButton: {
-    minHeight: 44,
+    minHeight: 48,
     borderWidth: 1,
     borderStyle: "dashed",
     borderColor: mobileTheme.colors.border,
@@ -199,6 +199,10 @@ const styles = StyleSheet.create({
     color: mobileTheme.colors.ink,
   },
   closeButton: {
+    minHeight: 48,
+    minWidth: 48,
+    justifyContent: "center",
+    alignItems: "center",
     padding: 4,
   },
   closeButtonText: {

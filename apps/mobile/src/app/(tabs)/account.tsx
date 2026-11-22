@@ -19,6 +19,7 @@ import {
   useDeleteAccount,
   useEntitlements,
 } from "@/features/account";
+import { FloralSprig } from "@/components/ui/floral-sprig";
 import { useMobileAuth } from "@/hooks/use-mobile-auth";
 import { useMobileUser } from "@/hooks/use-mobile-user";
 import { WEB_ORIGIN } from "@/lib/mobile-config";
@@ -142,6 +143,7 @@ export default function AccountTab() {
         </View>
         <View style={styles.signedOutContainer}>
           <View style={styles.signedOutCard}>
+            <FloralSprig size={44} style={{ marginBottom: 12 }} />
             <Text style={styles.signedOutTitle}>Sign in to CherryQube</Text>
             <Text style={styles.signedOutCopy}>
               Sign in to manage your export credits, personalized creations, and

@@ -352,8 +352,8 @@ const styles = StyleSheet.create({
     backgroundColor: mobileTheme.colors.surface,
   },
   backButton: {
-    minHeight: 44,
-    minWidth: 44,
+    minHeight: 48,
+    minWidth: 48,
     justifyContent: "center",
   },
   backButtonText: {
@@ -369,7 +369,7 @@ const styles = StyleSheet.create({
     fontSize: 17,
   },
   headerSpacer: {
-    minWidth: 44,
+    minWidth: 48,
   },
   centerContainer: {
     flex: 1,
@@ -533,6 +533,9 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   manageGuestsButton: {
+    minHeight: 48,
+    justifyContent: "center",
+    alignItems: "center",
     paddingVertical: 8,
     paddingHorizontal: 12,
   },

@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   actionButton: {
-    minHeight: 44,
+    minHeight: 48,
     minWidth: 64,
     paddingHorizontal: 12,
     borderRadius: 8,

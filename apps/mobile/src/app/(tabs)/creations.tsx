@@ -19,6 +19,7 @@ import {
   useCreations,
   useDeleteCreation,
 } from "@/features/creations/use-creations";
+import { FloralSprig } from "@/components/ui/floral-sprig";
 import { useMobileAuth } from "@/hooks/use-mobile-auth";
 import { useScreenActivity } from "@/hooks/use-screen-activity";
 import { WEB_ORIGIN } from "@/lib/mobile-config";
@@ -181,6 +182,7 @@ export default function CreationsTab() {
             </View>
           ) : (
             <View style={styles.emptyContainer}>
+              <FloralSprig size={48} style={{ marginBottom: 12 }} />
               <Text style={styles.emptyTitle}>No creations yet</Text>
               <Text style={styles.emptyText}>
                 You haven’t created any greetings or invitations yet. Browse our
@@ -449,7 +451,7 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   deleteButton: {
-    minHeight: 36,
+    minHeight: 48,
     paddingHorizontal: 12,
     justifyContent: "center",
     alignItems: "center",
@@ -544,7 +546,7 @@ const styles = StyleSheet.create({
     borderColor: mobileTheme.colors.accent,
     borderWidth: 1,
     borderRadius: 999,
-    minHeight: 44,
+    minHeight: 48,
     paddingHorizontal: 20,
     justifyContent: "center",
     alignItems: "center",

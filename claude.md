@@ -271,10 +271,17 @@ No RSVP tracking on our side. The page shows a button that opens a prefilled mes
 
 ## 14. Mobile bridge (WebView)
 
-- The shell loads `/create/[templateId]?embed=1`. Embed mode hides web chrome that duplicates native UI.
-- Typed `postMessage` protocol defined in `packages/shared` includes `REQUEST_AUTH`, `AUTH_EXPIRED`, `AUTH_HANDOFF_COMPLETE`, `REQUEST_SIGN_OUT`, `PHOTO_PICKED`, `REQUEST_SHARE`, `REQUEST_PAYWALL`, and `ENTITLEMENTS_UPDATED`. Validate every message with zod on both sides. Native accepts a message only when both the reported and current WebView URLs match the configured origin; unknown messages are ignored.
+- The shell loads `/create/[templateId]?embed=1`. Embed mode hides web chrome that duplicates native UI. Physical devices strictly reject localhost/unset loopbacks and require an explicit LAN or deployed HTTPS `EXPO_PUBLIC_WEB_ORIGIN` (visibly reported on-device if misconfigured); emulators map localhost to `10.0.2.2`.
+- Typed `postMessage` protocol defined in `packages/shared` includes `REQUEST_AUTH`, `AUTH_EXPIRED`, `AUTH_HANDOFF_COMPLETE`, `REQUEST_SIGN_OUT`, `PHOTO_PICKED`, `REQUEST_SHARE`, `REQUEST_PAYWALL`, `EXPORT_REQUESTED`, `CLOSE_EDITOR`, `EDITOR_DIRTY_CHANGED`, and `ENTITLEMENTS_UPDATED`. Validate every message with zod on both sides. Native accepts a message only when both the reported and current WebView URLs match the configured origin; unknown messages are ignored.
 - Before `REQUEST_AUTH`, text drafts are persisted in localStorage and restore after the WebView reloads. Photos are intentionally memory-only and are lost during that reload.
 - Native owns: Clerk sign-in, photo picker, share sheet, paywall and purchases.
+- Native screens:
+  - **Template Picker** (`/(tabs)/index.tsx`): Native card catalog with holiday filters, theme tokens, and navigation into the WebView editor (`/editor/[templateId]`).
+  - **My Creations** (`/(tabs)/creations.tsx`): Infinite pagination with `useInfiniteQuery`, disk-cached poster previews (`expo-image`), pull-to-refresh, screen focus refetching, theme status badges, and delete confirmation.
+  - **Creation Detail** (`/creation/[id].tsx`): Lifecycle-gated render polling (`enabled: Boolean(renderId) && isFocused && isForeground` halts when off-screen or backgrounded), `expo-video` player with `null` fallback for drafts/rendering, native MP4 sharing (`expo-sharing`), public link clipboard copy, retry failed exports, and draft editor resumption (`draft=<id>`).
+  - **Guest Management** (`/creation/[id]/guests.tsx`): Gated strictly to invitations (cards show an informative redirect), single guest add, newline-separated paste import with client sanitization/duplicate skipping, 200-guest cap display/enforcement, copy single link, native share sheet, copy all (`Name: link`), and single/bulk deletion alerts.
+  - **Account Tab** (`/(tabs)/account.tsx`): Email via `useMobileUser` fallback (safe when unconfigured), read-only credit balance (`/api/entitlements`), sign out with complete query cache purge (`queryClient.clear()`), 2-step permanent account deletion alert calling `DELETE /api/account`, and external browser links to Terms, Privacy, and Support.
+  - **Design & Assets**: Light botanical SVG accents (`FloralSprig`), safe area insets on all routes, minimum 48dp touch targets, and strict adherence to shared design tokens. Obsolete starter files have been completely removed (code and automated checks complete; real-device checklist in Phase 10 remains outstanding).
 
 ---
 

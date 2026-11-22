@@ -14,6 +14,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { FloralSprig } from "@/components/ui/floral-sprig";
 import { useCreationDetail } from "@/features/creations/use-creations";
 import {
   GuestAddForm,
@@ -316,6 +317,7 @@ export default function GuestsScreen() {
               </View>
             ) : (
               <View style={styles.centeredContent}>
+                <FloralSprig size={40} style={{ marginBottom: 12 }} />
                 <Text style={styles.emptyTitle}>No guests added yet</Text>
                 <Text style={styles.emptySubtitle}>
                   Add guests above to generate unique invitation links for
@@ -349,8 +351,8 @@ const styles = StyleSheet.create({
     backgroundColor: mobileTheme.colors.surface,
   },
   backButton: {
-    minHeight: 44,
-    minWidth: 44,
+    minHeight: 48,
+    minWidth: 48,
     justifyContent: "center",
   },
   backButtonText: {
@@ -379,7 +381,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   headerSpacer: {
-    minWidth: 44,
+    minWidth: 48,
   },
   listContent: {
     padding: 16,
@@ -399,7 +401,7 @@ const styles = StyleSheet.create({
   },
   batchButton: {
     flex: 1,
-    minHeight: 44,
+    minHeight: 48,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: mobileTheme.colors.border + "55",
@@ -449,9 +451,9 @@ const styles = StyleSheet.create({
   },
   actionPill: {
     marginTop: 16,
-    minHeight: 44,
+    minHeight: 48,
     paddingHorizontal: 20,
-    borderRadius: 22,
+    borderRadius: 24,
     backgroundColor: mobileTheme.colors.accent,
     justifyContent: "center",
     alignItems: "center",

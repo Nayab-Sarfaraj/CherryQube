@@ -371,13 +371,20 @@ remaining device/deployment checks are documented in `docs/stage-9.md`.
 
 - **Expo app** with TypeScript, a themed icon and splash, a package name, and EAS Build configured with Play App Signing.
 - **Native Clerk sign-in** (Expo SDK, secure token storage, native email-code and configured Google sign-in UI). Completed in code; real-device verification remains required.
-- **WebView root** loading `/?embed=1` and `/create/[templateId]?embed=1`. Embed mode hides web chrome that duplicates native UI and hides web checkout.
+- **WebView root** loading `/?embed=1` and `/create/[templateId]?embed=1`. Embed mode hides web chrome that duplicates native UI and hides web checkout. Physical devices strictly reject localhost/unset loopbacks and require an explicit LAN or deployed HTTPS `EXPO_PUBLIC_WEB_ORIGIN` (visibly reported on-device if misconfigured); emulators map localhost to `10.0.2.2`.
 - **Auth handoff:** after native sign-in, the app asks the backend for a Clerk one-time 60-second sign-in ticket (authenticated by the native session, rate limited per user and IP). The WebView opens `/mobile-auth?ticket=…&returnTo=…`, validates the same-origin relative return path, removes the ticket from the visible URL before redemption, and completes web sign-in through Clerk's ticket flow. The callback is `no-store` and `no-referrer`. Confirm this on a real Android device early.
-- **Typed bridge** (schemas in `packages/shared`, validated with zod on both sides). Messages: `REQUEST_AUTH`, `AUTH_EXPIRED`, `AUTH_HANDOFF_COMPLETE`, `REQUEST_SIGN_OUT`, `PHOTO_PICKED`, `REQUEST_SHARE`, `REQUEST_PAYWALL`, `ENTITLEMENTS_UPDATED`. Native checks the reported and current WebView origins before accepting a message; unknown messages are ignored.
+- **Typed bridge** (schemas in `packages/shared`, validated with zod on both sides). Messages: `REQUEST_AUTH`, `AUTH_EXPIRED`, `AUTH_HANDOFF_COMPLETE`, `REQUEST_SIGN_OUT`, `PHOTO_PICKED`, `REQUEST_SHARE`, `REQUEST_PAYWALL`, `EXPORT_REQUESTED`, `CLOSE_EDITOR`, `EDITOR_DIRTY_CHANGED`, `ENTITLEMENTS_UPDATED`. Native checks the reported and current WebView origins before accepting a message; unknown messages are ignored.
 - **Native photo picker:** pick, downscale, upload to the presigned URL, send the resulting URL to the WebView. If the WebView's own file input works reliably on Android, it is an acceptable simpler fallback, but confirm with the owner first.
 - **Native share:** download the MP4 to cache and open the Android share sheet with the file and link.
 - **WebView hardening:** allow only our origin for in-WebView navigation. Open `mailto:`, `sms:`, and `wa.me` links through the OS. Handle the hardware back button, offline and error screens, and autoplay of muted video.
 - **Closed testing:** upload the first build to the Play **closed test** track as early as possible. Recruit at least 12 testers who stay opted in for 14 continuous days and actually use the app.
+- **Mobile app slices (1–6) complete in code:**
+  - _Slice 1:_ Native Expo shell, typed mobile bridge (`@greetings/shared`), and auth handoff.
+  - _Slice 2:_ Mobile template catalog, template picker home screen, and embedded WebView editor route with draft restoration.
+  - _Slice 3:_ My creations (`useInfiniteQuery`, disk-cached posters, focus refetch, status badges) and Creation detail (`expo-video` with `null` draft fallback, strict off-screen/background polling halt, native MP4/link sharing, retry export, and draft re-opening).
+  - _Slice 4:_ Guest management (`/creation/[id]/guests`) with single add, multiline paste import with client sanitization, 200-guest cap enforcement, native share sheet, copy link, copy all (`Name: link`), and single/bulk deletion alerts.
+  - _Slice 5:_ Account screen with Clerk email via `useMobileUser` fallback, read-only credits from `/api/entitlements`, sign-out cache purge, 2-step permanent deletion with `DELETE /api/account`, and external legal/support links.
+  - _Slice 6:_ Polish, light SVG floral accents (`FloralSprig`), accessibility labels, 48dp minimum targets, safe area checks, and complete removal of obsolete starter files (code and automated checks complete; real-device checklist in Phase 10 remains outstanding).
 
 **Rules and edge cases**
 

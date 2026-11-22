@@ -5,19 +5,20 @@ import { orderTemplates, themeNames, type ThemeId } from "@greetings/shared";
 import { useMemo, useState } from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { hostedUrl } from "@/lib/mobile-config";
+import { WEB_ORIGIN } from "@/lib/mobile-config";
 import { mobileTheme } from "@/theme/theme";
 
 type TypeFilter = "all" | "card" | "invitation";
 type ThemeFilter = "all" | ThemeId;
 
 function posterUrl(path: string) {
-  return new URL(path, `${hostedUrl("/")}`).toString();
+  return `${WEB_ORIGIN}${path.startsWith("/") ? "" : "/"}${path}`;
 }
 
 export function HomeScreen() {
   const [type, setType] = useState<TypeFilter>("all");
   const [theme, setTheme] = useState<ThemeFilter>("all");
+
   const templates = useMemo(
     () =>
       orderTemplates(mobileTemplateCatalog).filter(
@@ -27,6 +28,7 @@ export function HomeScreen() {
       ),
     [theme, type],
   );
+
   return (
     <SafeAreaView edges={["top"]} style={styles.safe}>
       <FlatList
@@ -79,16 +81,37 @@ export function HomeScreen() {
             }
             style={styles.card}
           >
-            <Image
-              source={posterUrl(item.posterPath)}
-              style={styles.poster}
-              contentFit="cover"
-              cachePolicy="disk"
-            />
+            <View style={styles.posterContainer}>
+              <Image
+                source={posterUrl(item.posterPath)}
+                style={styles.poster}
+                contentFit="cover"
+                cachePolicy="disk"
+              />
+              <View
+                style={[
+                  styles.badge,
+                  item.type === "card"
+                    ? styles.cardBadge
+                    : styles.invitationBadge,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.badgeText,
+                    item.type === "card"
+                      ? styles.cardBadgeText
+                      : styles.invitationBadgeText,
+                  ]}
+                >
+                  {item.type === "card" ? "Card" : "Invitation"}
+                </Text>
+              </View>
+            </View>
             <Text style={styles.cardTitle}>{item.title}</Text>
             <Text style={styles.cardMeta}>
               {themeNames[item.themeId]} ·{" "}
-              {item.type === "card" ? "Card" : "Invitation"}
+              {item.type === "card" ? "5–8s" : "20–30s"}
             </Text>
           </Pressable>
         )}
@@ -114,14 +137,14 @@ function FilterRow<T extends string>({
         <Pressable
           key={value}
           accessibilityRole="button"
-          accessibilityState={{ selected: value === selected }}
+          accessibilityLabel={`Filter by ${label(value)}`}
           onPress={() => onSelect(value)}
-          style={[styles.filter, value === selected && styles.filterSelected]}
+          style={[styles.filter, selected === value && styles.filterSelected]}
         >
           <Text
             style={[
               styles.filterText,
-              value === selected && styles.filterTextSelected,
+              selected === value && styles.filterTextSelected,
             ]}
           >
             {label(value)}
@@ -181,7 +204,47 @@ const styles = StyleSheet.create({
   },
   filterTextSelected: { color: mobileTheme.colors.surface },
   card: { flex: 1, marginTop: 16, minWidth: 0 },
-  poster: { aspectRatio: 0.69, borderRadius: 18, width: "100%" },
+  posterContainer: {
+    width: "100%",
+    aspectRatio: 0.69,
+    borderRadius: 16,
+    overflow: "hidden",
+    backgroundColor: mobileTheme.colors.surface,
+    borderWidth: 1,
+    borderColor: mobileTheme.colors.border + "33",
+    position: "relative",
+  },
+  poster: { width: "100%", height: "100%" },
+  badge: {
+    position: "absolute",
+    top: 8,
+    left: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  badgeText: {
+    fontFamily: "Figtree_600SemiBold",
+    fontSize: 11,
+  },
+  cardBadge: {
+    backgroundColor: mobileTheme.colors.surface,
+    borderWidth: 1,
+    borderColor: mobileTheme.colors.border + "55",
+  },
+  cardBadgeText: {
+    fontFamily: "Figtree_600SemiBold",
+    fontSize: 11,
+    color: mobileTheme.colors.ink,
+  },
+  invitationBadge: {
+    backgroundColor: mobileTheme.colors.accent,
+  },
+  invitationBadgeText: {
+    fontFamily: "Figtree_600SemiBold",
+    fontSize: 11,
+    color: mobileTheme.colors.surface,
+  },
   cardTitle: {
     color: mobileTheme.colors.ink,
     fontFamily: "Fraunces_600SemiBold",
