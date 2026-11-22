@@ -370,10 +370,10 @@ remaining device/deployment checks are documented in `docs/stage-9.md`.
 **Build**
 
 - **Expo app** with TypeScript, a themed icon and splash, a package name, and EAS Build configured with Play App Signing.
-- **Native Clerk sign-in** (Expo SDK, secure token storage).
+- **Native Clerk sign-in** (Expo SDK, secure token storage, native email-code and configured Google sign-in UI). Completed in code; real-device verification remains required.
 - **WebView root** loading `/?embed=1` and `/create/[templateId]?embed=1`. Embed mode hides web chrome that duplicates native UI and hides web checkout.
-- **Auth handoff:** after native sign-in, the app asks the backend for a one-time sign-in ticket (authenticated by the native session). The WebView opens a small `/mobile-auth?ticket=…` route that completes the web sign-in using Clerk's ticket flow. Confirm the exact flow in Clerk's docs and test it early.
-- **Typed bridge** (schemas in `packages/shared`, validated with zod on both sides). Messages: `AUTH_TOKEN`, `PHOTO_PICKED`, `REQUEST_SHARE`, `REQUEST_PAYWALL`, `ENTITLEMENTS_UPDATED`. Ignore unknown messages.
+- **Auth handoff:** after native sign-in, the app asks the backend for a Clerk one-time 60-second sign-in ticket (authenticated by the native session, rate limited per user and IP). The WebView opens `/mobile-auth?ticket=…&returnTo=…`, validates the same-origin relative return path, removes the ticket from the visible URL before redemption, and completes web sign-in through Clerk's ticket flow. The callback is `no-store` and `no-referrer`. Confirm this on a real Android device early.
+- **Typed bridge** (schemas in `packages/shared`, validated with zod on both sides). Messages: `REQUEST_AUTH`, `AUTH_EXPIRED`, `AUTH_HANDOFF_COMPLETE`, `REQUEST_SIGN_OUT`, `PHOTO_PICKED`, `REQUEST_SHARE`, `REQUEST_PAYWALL`, `ENTITLEMENTS_UPDATED`. Native checks the reported and current WebView origins before accepting a message; unknown messages are ignored.
 - **Native photo picker:** pick, downscale, upload to the presigned URL, send the resulting URL to the WebView. If the WebView's own file input works reliably on Android, it is an acceptable simpler fallback, but confirm with the owner first.
 - **Native share:** download the MP4 to cache and open the Android share sheet with the file and link.
 - **WebView hardening:** allow only our origin for in-WebView navigation. Open `mailto:`, `sms:`, and `wa.me` links through the OS. Handle the hardware back button, offline and error screens, and autoplay of muted video.
@@ -383,6 +383,7 @@ remaining device/deployment checks are documented in `docs/stage-9.md`.
 
 - Google blocks OAuth in embedded WebViews, so never start Google sign-in inside the WebView.
 - The WebView must never receive secrets. Only short-lived, single-use tickets.
+- Text drafts survive an auth-request reload through localStorage. Photos are memory-only and do not survive it.
 
 **Done when**
 

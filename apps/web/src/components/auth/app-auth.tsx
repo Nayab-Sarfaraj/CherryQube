@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState } from "react";
 import {
   useUser as useClerkUser,
   SignInButton as ClerkSignInButton,
@@ -41,17 +41,12 @@ const DevAuthContext = createContext<AppAuthContextValue>({
 });
 
 export function DevAuthProvider({ children }: { children: React.ReactNode }) {
-  const [isSignedIn, setIsSignedIn] = useState(true);
-  const [isLoaded, setIsLoaded] = useState(false);
-
-  useEffect(() => {
-    // Read cookie/localStorage for dev sign-in status
-    const isSignedOut =
-      typeof document !== "undefined" &&
-      document.cookie.includes("dev_user_id=signed_out");
-    setIsSignedIn(!isSignedOut);
-    setIsLoaded(true);
-  }, []);
+  const [isSignedIn, setIsSignedIn] = useState(
+    () =>
+      typeof document === "undefined" ||
+      !document.cookie.includes("dev_user_id=signed_out"),
+  );
+  const isLoaded = true;
 
   const signIn = () => {
     if (typeof document !== "undefined") {

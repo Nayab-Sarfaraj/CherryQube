@@ -236,7 +236,8 @@ No RSVP tracking on our side. The page shows a button that opens a prefilled mes
 - Creators have accounts. **Guests never need one.**
 - **Low-friction gating:** anyone can open the picker, edit, and preview without signing in. Require sign-in only at render, export, or purchase.
 - Clerk user ID is the identity used in MongoDB, the Polar customer external ID, and the RevenueCat app user ID, so entitlements sync across web and app.
-- **Mobile:** sign in natively with Clerk's Expo SDK, then hand a short-lived session to the WebView. Google blocks OAuth inside embedded WebViews, so never run Google sign-in inside the WebView. Verify the handoff on the server and test it on a real Android device early.
+- **Mobile:** sign in natively with Clerk's Expo SDK and secure token cache, then hand the same user to the WebView through a one-time, 60-second Clerk sign-in ticket. Native Clerk UI handles email code and configured Google sign-in; Google OAuth never runs inside the WebView. The ticket endpoint is authenticated, rate-limited per user and IP, and never logs tickets. The ticket callback accepts only a same-origin relative return path, uses `Cache-Control: no-store` and `Referrer-Policy: no-referrer`, and removes the ticket from the visible URL before redemption.
+- The mobile app has an explicit authentication state machine: Loading → SignedOut → SigningIn → HandoffPending → Ready, with Error handling and at most two silent WebView-session renewals. Sign-out remounts an incognito WebView so prior WebView storage is not reused by a later account.
 - Verify Clerk sessions in the server middleware on every protected route. Verify Clerk webhook signatures.
 
 ---
@@ -271,7 +272,8 @@ No RSVP tracking on our side. The page shows a button that opens a prefilled mes
 ## 14. Mobile bridge (WebView)
 
 - The shell loads `/create/[templateId]?embed=1`. Embed mode hides web chrome that duplicates native UI.
-- Typed `postMessage` protocol defined in `packages/shared` (message types such as `PHOTO_PICKED`, `REQUEST_SHARE`, `REQUEST_PAYWALL`, `AUTH_TOKEN`, `ENTITLEMENTS_UPDATED`). Validate every message with zod on both sides. Ignore unknown messages.
+- Typed `postMessage` protocol defined in `packages/shared` includes `REQUEST_AUTH`, `AUTH_EXPIRED`, `AUTH_HANDOFF_COMPLETE`, `REQUEST_SIGN_OUT`, `PHOTO_PICKED`, `REQUEST_SHARE`, `REQUEST_PAYWALL`, and `ENTITLEMENTS_UPDATED`. Validate every message with zod on both sides. Native accepts a message only when both the reported and current WebView URLs match the configured origin; unknown messages are ignored.
+- Before `REQUEST_AUTH`, text drafts are persisted in localStorage and restore after the WebView reloads. Photos are intentionally memory-only and are lost during that reload.
 - Native owns: Clerk sign-in, photo picker, share sheet, paywall and purchases.
 
 ---

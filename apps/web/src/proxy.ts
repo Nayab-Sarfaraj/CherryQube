@@ -30,8 +30,7 @@ const NEGOTIATION_ALLOWLIST = [
 
 function isAllowlistedForNegotiation(pathname: string): boolean {
   return (
-    NEGOTIATION_ALLOWLIST.includes(pathname) ||
-    pathname.startsWith("/create/")
+    NEGOTIATION_ALLOWLIST.includes(pathname) || pathname.startsWith("/create/")
   );
 }
 
@@ -40,6 +39,17 @@ function withDescribedBy<T extends Response>(response: T, origin: string): T {
     "Link",
     `<${origin}/llms.txt>; rel="describedby", <${origin}/llms-full.txt>; rel="describedby", <${origin}/ai.txt>; rel="describedby"`,
   );
+  return response;
+}
+
+function withMobileAuthSecurity<T extends Response>(
+  response: T,
+  pathname: string,
+): T {
+  if (pathname === "/mobile-auth") {
+    response.headers.set("Cache-Control", "no-store");
+    response.headers.set("Referrer-Policy", "no-referrer");
+  }
   return response;
 }
 
@@ -100,7 +110,10 @@ export default async function proxy(
   }
 
   if (!authEnabled()) {
-    return withDescribedBy(NextResponse.next(), origin);
+    return withMobileAuthSecurity(
+      withDescribedBy(NextResponse.next(), origin),
+      pathname,
+    );
   }
 
   const clerkRes = await clerkMiddleware({
@@ -109,10 +122,13 @@ export default async function proxy(
   })(request, event);
 
   if (clerkRes) {
-    return withDescribedBy(clerkRes, origin);
+    return withMobileAuthSecurity(withDescribedBy(clerkRes, origin), pathname);
   }
 
-  return withDescribedBy(NextResponse.next(), origin);
+  return withMobileAuthSecurity(
+    withDescribedBy(NextResponse.next(), origin),
+    pathname,
+  );
 }
 
 export const config = {

@@ -6,6 +6,7 @@ function useDummyAuth() {
     isLoaded: true,
     isSignedIn: false,
     getToken: async () => null,
+    signOut: async () => {},
     userId: null,
   };
 }

@@ -1,4 +1,11 @@
+import type {
+  MobileAuthAction,
+  MobileAuthState,
+} from "@/features/auth/mobile-auth-state";
 import { useMobileAuth } from "@/hooks/use-mobile-auth";
+import { hostedUrl, WEB_ORIGIN } from "@/lib/mobile-config";
+import { shareCreation } from "@/lib/native-share";
+import { pickAndUploadPhoto } from "@/lib/photo-upload";
 import {
   parseWebToNativeBridgeMessage,
   type NativeToWebBridgeMessage,
@@ -10,6 +17,7 @@ import {
   useRef,
   useState,
   type ComponentType,
+  type RefAttributes,
 } from "react";
 import {
   ActivityIndicator,
@@ -21,14 +29,17 @@ import {
   Text,
   View,
 } from "react-native";
-import WebView, { type WebViewNavigation } from "react-native-webview";
-import {
-  hostedUrl,
-  WEB_ORIGIN,
-  CLERK_PUBLISHABLE_KEY,
-} from "@/lib/mobile-config";
-import { pickAndUploadPhoto } from "@/lib/photo-upload";
-import { shareCreation } from "@/lib/native-share";
+import WebView, {
+  type WebViewMessageEvent,
+  type WebViewNavigation,
+  type WebViewProps,
+} from "react-native-webview";
+
+// react-native-webview exposes an overloaded generic component under Expo's
+// React type setup; this narrows it to its documented prop surface.
+const NativeWebView = WebView as unknown as ComponentType<
+  WebViewProps & RefAttributes<WebView>
+>;
 
 function isAllowed(url: string) {
   try {
@@ -38,20 +49,36 @@ function isAllowed(url: string) {
   }
 }
 
-export function GreetingWebView({ path = "/" }: { path?: string }) {
-  const webViewRef = useRef<any>(null);
+type Props = {
+  auth: MobileAuthState;
+  onAuthAction: (action: MobileAuthAction) => void;
+  onRequestSignIn: () => void;
+  onSilentRetryExhausted: () => void;
+  onSignOut: () => void;
+  sessionKey: number;
+  path?: string;
+};
+
+export function GreetingWebView({
+  auth,
+  onAuthAction,
+  onRequestSignIn,
+  onSilentRetryExhausted,
+  onSignOut,
+  path = "/",
+  sessionKey,
+}: Props) {
+  const webViewRef = useRef<WebView>(null);
+  const currentUrlRef = useRef(hostedUrl(path));
   const { getToken, isSignedIn } = useMobileAuth();
   const [canGoBack, setCanGoBack] = useState(false);
   const [error, setError] = useState("");
   const [ticket, setTicket] = useState<string | null>(null);
-  const source = useMemo(
-    () => ({
-      uri: ticket
-        ? hostedUrl(`/mobile-auth?ticket=${encodeURIComponent(ticket)}`)
-        : hostedUrl(path),
-    }),
-    [path, ticket],
-  );
+  const source = useMemo(() => {
+    if (!ticket) return { uri: hostedUrl(path) };
+    const params = new URLSearchParams({ ticket, returnTo: path });
+    return { uri: hostedUrl(`/mobile-auth?${params.toString()}`) };
+  }, [path, ticket]);
   const send = useCallback((message: NativeToWebBridgeMessage) => {
     webViewRef.current?.postMessage(JSON.stringify(message));
   }, []);
@@ -67,22 +94,32 @@ export function GreetingWebView({ path = "/" }: { path?: string }) {
   }, [getToken, send]);
 
   useEffect(() => {
-    if (!isSignedIn || ticket) return;
+    if (auth.status !== "handoff-pending" || !isSignedIn) return;
+    let active = true;
     void (async () => {
       try {
         const token = await getToken();
+        if (!token) throw new Error("No active mobile session");
         const response = await fetch(`${WEB_ORIGIN}/api/mobile/auth-ticket`, {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
         });
         const body = (await response.json()) as { ticket?: string };
-        if (!response.ok || !body.ticket) throw new Error();
-        setTicket(body.ticket);
+        if (!response.ok || !body.ticket) throw new Error("Ticket unavailable");
+        if (active) setTicket(body.ticket);
       } catch {
-        setError("Could not connect your mobile account. Try again.");
+        if (active)
+          onAuthAction({
+            type: "HANDOFF_FAILED",
+            message:
+              "Could not connect your mobile account. Check your connection and retry.",
+          });
       }
     })();
-  }, [getToken, isSignedIn, ticket]);
+    return () => {
+      active = false;
+    };
+  }, [auth.status, getToken, isSignedIn, onAuthAction]);
 
   useEffect(() => {
     if (Platform.OS !== "android") return;
@@ -107,16 +144,54 @@ export function GreetingWebView({ path = "/" }: { path?: string }) {
     return false;
   }
 
+  function handleMessage(event: WebViewMessageEvent) {
+    const reportedUrl = event.nativeEvent.url;
+    if (
+      !reportedUrl ||
+      !isAllowed(reportedUrl) ||
+      !isAllowed(currentUrlRef.current)
+    )
+      return;
+    try {
+      const parsed = parseWebToNativeBridgeMessage(
+        JSON.parse(event.nativeEvent.data),
+      );
+      if (!parsed.success) return;
+      if (parsed.data.type === "PHOTO_PICKED") void pickPhoto();
+      if (parsed.data.type === "REQUEST_SHARE")
+        void shareCreation(parsed.data.fileUrl, parsed.data.linkUrl).catch(() =>
+          setError("The video could not be shared."),
+        );
+      if (parsed.data.type === "REQUEST_PAYWALL")
+        setError("In-app purchases will be available in the next app update.");
+      if (parsed.data.type === "REQUEST_AUTH") onRequestSignIn();
+      if (parsed.data.type === "AUTH_HANDOFF_COMPLETE")
+        onAuthAction({ type: "HANDOFF_READY" });
+      if (parsed.data.type === "REQUEST_SIGN_OUT") onSignOut();
+      if (parsed.data.type === "AUTH_EXPIRED") {
+        setTicket(null);
+        if (!isSignedIn) onAuthAction({ type: "SIGNED_OUT" });
+        else if (auth.silentRetries < 2) onAuthAction({ type: "AUTH_EXPIRED" });
+        else onSilentRetryExhausted();
+      }
+    } catch {
+      // Malformed and unknown messages are ignored deliberately.
+    }
+  }
+
   return (
     <View style={styles.container}>
       <NativeWebView
+        key={sessionKey}
         ref={webViewRef}
         source={source}
         originWhitelist={[WEB_ORIGIN]}
         onShouldStartLoadWithRequest={handleNavigation}
-        onNavigationStateChange={(state: { canGoBack: boolean }) =>
-          setCanGoBack(state.canGoBack)
-        }
+        onNavigationStateChange={(state: WebViewNavigation) => {
+          currentUrlRef.current = state.url;
+          setCanGoBack(state.canGoBack);
+        }}
+        onMessage={handleMessage}
         onError={() =>
           setError(
             "The editor could not load. Check your connection and try again.",
@@ -125,30 +200,12 @@ export function GreetingWebView({ path = "/" }: { path?: string }) {
         onHttpError={() =>
           setError("The editor is temporarily unavailable. Try again shortly.")
         }
-        onMessage={(event: { nativeEvent: { data: string } }) => {
-          try {
-            const parsed = parseWebToNativeBridgeMessage(
-              JSON.parse(event.nativeEvent.data),
-            );
-            if (!parsed.success) return;
-            if (parsed.data.type === "PHOTO_PICKED") void pickPhoto();
-            if (parsed.data.type === "REQUEST_SHARE")
-              void shareCreation(
-                parsed.data.fileUrl,
-                parsed.data.linkUrl,
-              ).catch(() => setError("The video could not be shared."));
-            if (parsed.data.type === "REQUEST_PAYWALL")
-              setError(
-                "In-app purchases will be available in the next app update.",
-              );
-          } catch {
-            // Ignore malformed or unknown bridge messages.
-          }
-        }}
         allowsInlineMediaPlayback
-        mediaPlaybackRequiresUserAction={false}
-        javaScriptEnabled
+        cacheEnabled={false}
         domStorageEnabled
+        incognito
+        javaScriptEnabled
+        mediaPlaybackRequiresUserAction={false}
         startInLoadingState
         renderLoading={() => (
           <View style={styles.loading}>
@@ -173,18 +230,19 @@ export function GreetingWebView({ path = "/" }: { path?: string }) {
           </Pressable>
         </View>
       )}
-      {CLERK_PUBLISHABLE_KEY && !isSignedIn && (
+      {auth.status === "signed-out" && (
         <View style={styles.signedOut}>
           <Text style={styles.signedOutText}>
             Sign in to save, export, and add photos.
           </Text>
+          <Pressable accessibilityRole="button" onPress={onRequestSignIn}>
+            <Text style={styles.signIn}>Sign in</Text>
+          </Pressable>
         </View>
       )}
     </View>
   );
 }
-
-const NativeWebView = WebView as unknown as ComponentType<any>;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFF8E8" },
@@ -216,4 +274,11 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   signedOutText: { color: "#173E31", fontSize: 13, textAlign: "center" },
+  signIn: {
+    color: "#7A2430",
+    fontSize: 14,
+    fontWeight: "700",
+    marginTop: 4,
+    textAlign: "center",
+  },
 });

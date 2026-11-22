@@ -35,7 +35,45 @@ function Controls({ input, photo, initialId, invalid, embed }: Props) {
   const { saveDraft, exportVideo, job, busy, savedId, prepareDraft } =
     useExportCreation(input, photo, initialId, quality);
 
+  useEffect(() => {
+    if (
+      !embed ||
+      !isLoaded ||
+      isSignedIn ||
+      new URLSearchParams(window.location.search).get("nativeSession") !== "1"
+    )
+      return;
+    window.ReactNativeWebView?.postMessage(
+      JSON.stringify({ type: "AUTH_EXPIRED" }),
+    );
+  }, [embed, isLoaded, isSignedIn]);
+
+  function requestNativeAuthentication() {
+    localStorage.setItem(
+      `draft:${input.templateId}`,
+      JSON.stringify({
+        fields: { ...input.props, photoUrl: undefined },
+        contactMethod: input.hostContact?.method ?? "email",
+        contactValue: input.hostContact?.value ?? "",
+      }),
+    );
+    window.ReactNativeWebView?.postMessage(
+      JSON.stringify({ type: "REQUEST_AUTH" }),
+    );
+  }
+
   if (!isLoaded) return <p role="status">Loading account…</p>;
+
+  if (!isSignedIn && embed)
+    return (
+      <button
+        type="button"
+        onClick={requestNativeAuthentication}
+        className="rounded-full bg-accent px-6 py-3 font-medium text-white transition hover:opacity-90 focus-visible:outline-4 focus-visible:outline-accent"
+      >
+        Sign in to save or export
+      </button>
+    );
 
   if (!isSignedIn)
     return (
