@@ -26,7 +26,7 @@ export const invitationRepository = {
       { _id: id, ownerClerkId },
       {
         $set: { ...input, status: "draft" },
-        $unset: { pendingRenderId: 1, publishedRenderId: 1 },
+        $unset: { pendingRenderId: 1 },
       },
       { returnDocument: "after" },
     ).lean();

@@ -92,6 +92,30 @@ describe("guest service", () => {
       120,
     );
   });
+  it("keeps the published invitation content for existing guest links", async () => {
+    const test = setup();
+    test.repository.findPublic.mockResolvedValue({
+      guest: { name: "Sam" },
+      invitation: {
+        templateId: templates[1].id,
+        props: { ...templates[1].defaultProps, eventTitle: "Edited dinner" },
+        hostContact: { method: "email", value: "new@example.com" },
+      },
+      render: {
+        fileUrl: "/old-video.mp4",
+        posterUrl: "/old-poster.jpg",
+        input: {
+          props: { ...templates[1].defaultProps, eventTitle: "Original dinner" },
+          hostContact: { method: "email", value: "original@example.com" },
+        },
+      },
+    });
+    const result = await test.service.public("a".repeat(22));
+    expect(result.eventTitle).toBe("Original dinner");
+    expect(result.props.eventTitle).toBe("Original dinner");
+    expect(result.hostContact.value).toBe("original@example.com");
+    expect(result.videoUrl).toBe("/old-video.mp4");
+  });
 
   it("rejects malformed tokens before querying Mongo", async () => {
     const test = setup();

@@ -101,10 +101,11 @@ export function createGuestService(deps: Dependencies) {
       if (!/^[A-Za-z0-9_-]{22}$/.test(token)) throw new NotFoundError();
       const item = await deps.repository.findPublic(token);
       if (!item) throw new NotFoundError();
+      const publishedInput = item.render?.input;
       const parsed = invitationInput.safeParse({
         templateId: item.invitation.templateId,
-        props: item.invitation.props,
-        hostContact: item.invitation.hostContact,
+        props: publishedInput?.props ?? item.invitation.props,
+        hostContact: publishedInput?.hostContact ?? item.invitation.hostContact,
       });
       const template = getTemplate(String(item.invitation.templateId));
       if (

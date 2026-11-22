@@ -154,7 +154,7 @@ export const guestRepository = {
             },
           ],
         })
-          .select("fileUrl posterUrl")
+          .select("fileUrl posterUrl input.props input.hostContact")
           .lean()
       : null;
     return { guest, invitation, render };
