@@ -18,7 +18,8 @@ export type SaveInput = Pick<
 export function useInvitations(enabled = true) {
   return useQuery({
     queryKey: ["invitations"],
-    queryFn: () => api<SavedInvitation[]>("/api/invitations"),
+    queryFn: async () =>
+      (await api<{ items: SavedInvitation[] }>("/api/invitations")).items,
     enabled,
   });
 }
