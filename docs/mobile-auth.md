@@ -14,7 +14,7 @@ APK at development credentials.
 
 Set these variables for the matching web deployment:
 
-- `CLERK_PUBLISHABLE_KEY`
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
 - `CLERK_SECRET_KEY` — server only; never use an `EXPO_PUBLIC_` prefix
 - `CLERK_WEBHOOK_SECRET`
 - `APP_BASE_URL`
@@ -36,7 +36,7 @@ secrets.
 
 1. Enable **Native API** under **Native applications**.
 2. Add the Android native application with namespace and package name
-   `com.greetingsmobile.app` (change this document and configuration together if
+   `com.cherryqube.app` (change this document and configuration together if
    the package name changes).
 3. Enter the signing certificate's SHA-256 fingerprint for the appropriate
    build. Use the development keystore for a local development build; use the
@@ -56,7 +56,7 @@ their redirect URIs and client credentials cannot be mixed.
 1. Configure the OAuth consent screen and create a **Web application** client.
    Add the authorized redirect URI supplied by the matching Clerk instance.
 2. Create an **Android** OAuth client using package
-   `com.greetingsmobile.app` and the SHA-1 fingerprint for every certificate
+   `com.cherryqube.app` and the SHA-1 fingerprint for every certificate
    that signs that environment's APK/AAB.
 3. Use the Web client ID and secret in the matching Clerk Google connection.
    Use the Web and Android client IDs in the matching mobile environment.

@@ -5,11 +5,11 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/greetings-icon.png",
-    "scheme": "greetingsmobile",
-    "userInterfaceStyle": "automatic",
+    "scheme": "cherryqube",
+    "userInterfaceStyle": "light",
     "ios": {
       "icon": "./assets/expo.icon",
-      "bundleIdentifier": "com.greetingsmobile.app"
+      "bundleIdentifier": "com.cherryqube.app"
     },
     "android": {
       "adaptiveIcon": {
@@ -18,7 +18,7 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.greetingsmobile.app"
+      "package": "com.cherryqube.app"
     },
     "web": {
       "output": "server",

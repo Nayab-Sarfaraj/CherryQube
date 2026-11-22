@@ -3,7 +3,7 @@ import { validate } from "../../lib/validation";
 import { ValidationError } from "../../lib/errors";
 import { requireUser } from "../../middleware/auth";
 import { errorResponse } from "../../lib/errors";
-import { getRender, requestRender } from "./render.service";
+import { getRender, requestRender, retryRender } from "./render.service";
 import { renderDto } from "./render.mapper";
 export async function create(
   request: Request,
@@ -40,6 +40,26 @@ export async function get(
       renderDto(
         await getRender(await requireUser(), (await context.params).id),
       ),
+    );
+  } catch (error) {
+    return errorResponse(error);
+  }
+}
+
+export async function retry(
+  request: Request,
+  context: { params: Promise<{ id: string }> },
+) {
+  try {
+    return Response.json(
+      renderDto(
+        await retryRender(
+          await requireUser(),
+          (await context.params).id,
+          request.headers.get("x-forwarded-for")?.split(",")[0]?.trim(),
+        ),
+      ),
+      { status: 202 },
     );
   } catch (error) {
     return errorResponse(error);

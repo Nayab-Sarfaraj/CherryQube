@@ -136,11 +136,32 @@ export function createRenderService(deps: typeof defaultDependencies) {
       if (item.status === "ready") await publishResults(owner, id);
       return item;
     },
+    async retry(owner: string, id: string, ip?: string) {
+      if (!/^[a-f0-9]{24}$/i.test(id)) throw new NotFoundError();
+      const current = await deps.renders.get(owner, id);
+      if (!current) throw new NotFoundError();
+      if (current.status !== "failed") return current;
+      await deps.limit(`render:${owner}`, 10);
+      if (ip)
+        await deps.limit(
+          `render-ip:${createHash("sha256").update(ip).digest("hex")}`,
+          30,
+        );
+      if (current.attempts >= 3)
+        throw new RateLimitError(
+          "This video has reached its retry limit. Change the content before exporting again.",
+        );
+      const retried = await deps.renders.retryById(owner, id);
+      if (!retried) return (await deps.renders.get(owner, id)) ?? current;
+      await deps.bindResult(owner, retried.invitationId, retried);
+      return retried;
+    },
   };
 }
 export const renderService = createRenderService(defaultDependencies);
 export const requestRender = renderService.request;
 export const getRender = renderService.get;
+export const retryRender = renderService.retry;
 
 export async function listRenderJobs(owner: string) {
   await renderRepository.sweep();

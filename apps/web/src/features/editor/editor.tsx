@@ -79,6 +79,7 @@ export default function Editor({
     initial?.hostContact?.value ?? "",
   );
   const [ready, setReady] = useState(false);
+  const [dirty, setDirty] = useState(false);
   useEffect(() => {
     const timer = setTimeout(() => {
       const saved = localStorage.getItem(`draft:${templateId}`);
@@ -133,8 +134,10 @@ export default function Editor({
         }
       }
       const parsed = parseNativeToWebBridgeMessage(value);
-      if (parsed.success && parsed.data.type === "PHOTO_PICKED")
+      if (parsed.success && parsed.data.type === "PHOTO_PICKED") {
         setPhoto(parsed.data.url);
+        setDirty(true);
+      }
     };
     window.addEventListener("message", receive);
     document.addEventListener("message", receive as EventListener);
@@ -143,6 +146,12 @@ export default function Editor({
       document.removeEventListener("message", receive as EventListener);
     };
   }, [embed]);
+  useEffect(() => {
+    if (embed)
+      window.ReactNativeWebView?.postMessage(
+        JSON.stringify({ type: "EDITOR_DIRTY_CHANGED", dirty }),
+      );
+  }, [dirty, embed]);
   function requestNativePhoto() {
     window.ReactNativeWebView?.postMessage(
       JSON.stringify({ type: "PHOTO_PICKED", request: true }),
@@ -182,6 +191,7 @@ export default function Editor({
           "message",
         ];
   function update(key: string, value: string) {
+    setDirty(true);
     setFields((old) => ({ ...old, [key]: value || undefined }) as VideoProps);
   }
   async function choosePhoto(file?: File) {
@@ -220,6 +230,7 @@ export default function Editor({
         if (old) URL.revokeObjectURL(old);
         return URL.createObjectURL(blob);
       });
+      setDirty(true);
     } catch {
       setPhotoError("This photo could not be opened. Choose another one.");
     } finally {
@@ -229,6 +240,19 @@ export default function Editor({
   return (
     <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
       {embed && <EmbedMarker />}
+      {embed && (
+        <button
+          type="button"
+          onClick={() =>
+            window.ReactNativeWebView?.postMessage(
+              JSON.stringify({ type: "CLOSE_EDITOR" }),
+            )
+          }
+          className="underline underline-offset-4"
+        >
+          Close editor
+        </button>
+      )}
       {!embed && (
         <Link href="/" className="underline underline-offset-4">
           ← All templates
@@ -253,6 +277,16 @@ export default function Editor({
             photo={photo}
             initialId={initial?.id}
             embed={embed}
+            onExportRequested={(invitationId, renderId) => {
+              setDirty(false);
+              window.ReactNativeWebView?.postMessage(
+                JSON.stringify({
+                  type: "EXPORT_REQUESTED",
+                  invitationId,
+                  renderId,
+                }),
+              );
+            }}
             invalid={
               Object.keys(errors).length > 0 ||
               (template.type === "invitation" && Boolean(contactError))
@@ -370,7 +404,8 @@ export default function Editor({
                 id="contact-method"
                 value={contactMethod}
                 onChange={(event) =>
-                  setContactMethod(event.target.value as ContactMethod)
+                  setContactMethod(event.target.value as ContactMethod);
+                  setDirty(true);
                 }
                 className="mt-2 w-full rounded-lg border p-3"
               >
@@ -385,7 +420,10 @@ export default function Editor({
               <input
                 id="contact-value"
                 value={contactValue}
-                onChange={(event) => setContactValue(event.target.value)}
+                onChange={(event) => {
+                  setContactValue(event.target.value);
+                  setDirty(true);
+                }}
                 aria-invalid={Boolean(contactError)}
                 aria-describedby={contactError ? "contact-error" : undefined}
                 className="mt-2 w-full rounded-lg border p-3"

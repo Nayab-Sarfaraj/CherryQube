@@ -3,7 +3,11 @@ import type {
   MobileAuthState,
 } from "@/features/auth/mobile-auth-state";
 import { useMobileAuth } from "@/hooks/use-mobile-auth";
-import { hostedUrl, WEB_ORIGIN } from "@/lib/mobile-config";
+import {
+  CLERK_FRONTEND_ORIGIN,
+  hostedUrl,
+  WEB_ORIGIN,
+} from "@/lib/mobile-config";
 import { shareCreation } from "@/lib/native-share";
 import { pickAndUploadPhoto } from "@/lib/photo-upload";
 import {
@@ -21,9 +25,7 @@ import {
 } from "react";
 import {
   ActivityIndicator,
-  BackHandler,
   Linking,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -49,12 +51,29 @@ function isAllowed(url: string) {
   }
 }
 
+function isClerkHandshake(url: string) {
+  if (!CLERK_FRONTEND_ORIGIN) return false;
+
+  try {
+    const parsed = new URL(url);
+    return (
+      parsed.origin === CLERK_FRONTEND_ORIGIN &&
+      parsed.pathname === "/v1/client/handshake"
+    );
+  } catch {
+    return false;
+  }
+}
+
 type Props = {
   auth: MobileAuthState;
   onAuthAction: (action: MobileAuthAction) => void;
   onRequestSignIn: () => void;
   onSilentRetryExhausted: () => void;
   onSignOut: () => void;
+  onExportRequested?: (invitationId: string, renderId: string) => void;
+  onCloseEditor?: () => void;
+  onDirtyChanged?: (dirty: boolean) => void;
   sessionKey: number;
   path?: string;
 };
@@ -65,13 +84,15 @@ export function GreetingWebView({
   onRequestSignIn,
   onSilentRetryExhausted,
   onSignOut,
+  onExportRequested,
+  onCloseEditor,
+  onDirtyChanged,
   path = "/",
   sessionKey,
 }: Props) {
   const webViewRef = useRef<WebView>(null);
   const currentUrlRef = useRef(hostedUrl(path));
   const { getToken, isSignedIn } = useMobileAuth();
-  const [canGoBack, setCanGoBack] = useState(false);
   const [error, setError] = useState("");
   const [ticket, setTicket] = useState<string | null>(null);
   const source = useMemo(() => {
@@ -98,7 +119,12 @@ export function GreetingWebView({
     let active = true;
     void (async () => {
       try {
-        const token = await getToken();
+        let token: string | null = null;
+        for (const delayMs of [0, 500, 1_000]) {
+          if (delayMs) await new Promise((resolve) => setTimeout(resolve, delayMs));
+          token = await getToken();
+          if (token) break;
+        }
         if (!token) throw new Error("No active mobile session");
         const response = await fetch(`${WEB_ORIGIN}/api/mobile/auth-ticket`, {
           method: "POST",
@@ -121,21 +147,8 @@ export function GreetingWebView({
     };
   }, [auth.status, getToken, isSignedIn, onAuthAction]);
 
-  useEffect(() => {
-    if (Platform.OS !== "android") return;
-    const subscription = BackHandler.addEventListener(
-      "hardwareBackPress",
-      () => {
-        if (!canGoBack) return false;
-        webViewRef.current?.goBack();
-        return true;
-      },
-    );
-    return () => subscription.remove();
-  }, [canGoBack]);
-
   function handleNavigation(request: WebViewNavigation) {
-    if (isAllowed(request.url)) return true;
+    if (isAllowed(request.url) || isClerkHandshake(request.url)) return true;
     if (/^(mailto:|sms:|https:\/\/wa\.me\/)/i.test(request.url)) {
       void Linking.openURL(request.url).catch(() =>
         setError("This link could not be opened."),
@@ -168,6 +181,11 @@ export function GreetingWebView({
       if (parsed.data.type === "AUTH_HANDOFF_COMPLETE")
         onAuthAction({ type: "HANDOFF_READY" });
       if (parsed.data.type === "REQUEST_SIGN_OUT") onSignOut();
+      if (parsed.data.type === "EXPORT_REQUESTED")
+        onExportRequested?.(parsed.data.invitationId, parsed.data.renderId);
+      if (parsed.data.type === "CLOSE_EDITOR") onCloseEditor?.();
+      if (parsed.data.type === "EDITOR_DIRTY_CHANGED")
+        onDirtyChanged?.(parsed.data.dirty);
       if (parsed.data.type === "AUTH_EXPIRED") {
         setTicket(null);
         if (!isSignedIn) onAuthAction({ type: "SIGNED_OUT" });
@@ -185,11 +203,22 @@ export function GreetingWebView({
         key={sessionKey}
         ref={webViewRef}
         source={source}
-        originWhitelist={[WEB_ORIGIN]}
+        originWhitelist={[
+          WEB_ORIGIN,
+          ...(CLERK_FRONTEND_ORIGIN ? [CLERK_FRONTEND_ORIGIN] : []),
+        ]}
         onShouldStartLoadWithRequest={handleNavigation}
         onNavigationStateChange={(state: WebViewNavigation) => {
           currentUrlRef.current = state.url;
-          setCanGoBack(state.canGoBack);
+          if (!isAllowed(state.url)) return;
+          try {
+            if (
+              new URL(state.url).searchParams.get("nativeSession") === "1"
+            )
+              onAuthAction({ type: "HANDOFF_READY" });
+          } catch {
+            // Ignore malformed WebView URLs.
+          }
         }}
         onMessage={handleMessage}
         onError={() =>
@@ -200,10 +229,10 @@ export function GreetingWebView({
         onHttpError={() =>
           setError("The editor is temporarily unavailable. Try again shortly.")
         }
+        androidLayerType="hardware"
         allowsInlineMediaPlayback
         cacheEnabled={false}
         domStorageEnabled
-        incognito
         javaScriptEnabled
         mediaPlaybackRequiresUserAction={false}
         startInLoadingState

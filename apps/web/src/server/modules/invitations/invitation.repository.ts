@@ -2,9 +2,15 @@ import { connectDb } from "../../lib/db";
 import { Invitation } from "./invitation.model";
 import type { InvitationInput } from "./invitation.schema";
 export const invitationRepository = {
-  async list(ownerClerkId: string) {
+  async list(ownerClerkId: string, limit = 50, cursor?: string) {
     await connectDb();
-    return Invitation.find({ ownerClerkId }).sort({ updatedAt: -1 }).lean();
+    return Invitation.find({
+      ownerClerkId,
+      ...(cursor ? { _id: { $lt: cursor } } : {}),
+    })
+      .sort({ _id: -1 })
+      .limit(limit + 1)
+      .lean();
   },
   async get(ownerClerkId: string, id: string) {
     await connectDb();
@@ -18,7 +24,10 @@ export const invitationRepository = {
     await connectDb();
     return Invitation.findOneAndUpdate(
       { _id: id, ownerClerkId },
-      { $set: input },
+      {
+        $set: { ...input, status: "draft" },
+        $unset: { pendingRenderId: 1, publishedRenderId: 1 },
+      },
       { returnDocument: "after" },
     ).lean();
   },

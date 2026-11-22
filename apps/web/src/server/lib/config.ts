@@ -24,18 +24,19 @@ const clerkSchema = z.object({
 });
 export function authEnabled() {
   return Boolean(
-    process.env.CLERK_PUBLISHABLE_KEY && process.env.CLERK_SECRET_KEY,
+    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY &&
+    process.env.CLERK_SECRET_KEY,
   );
 }
 export function getAuthConfig() {
   const result = clerkSchema.safeParse({
-    publishableKey: process.env.CLERK_PUBLISHABLE_KEY,
+    publishableKey: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
     secretKey: process.env.CLERK_SECRET_KEY,
     webhookSecret: process.env.CLERK_WEBHOOK_SECRET,
   });
   if (!result.success)
     throw new Error(
-      "Configure CLERK_PUBLISHABLE_KEY and CLERK_SECRET_KEY for authentication",
+      "Configure NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY and CLERK_SECRET_KEY for authentication",
     );
   return result.data;
 }

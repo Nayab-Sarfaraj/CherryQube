@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ExportQuality } from "@greetings/shared";
 import { BillingPanel } from "../billing/billing-panel";
 import { ExportQualityOptions } from "../billing/export-quality";
@@ -15,11 +15,13 @@ type Props = {
   initialId?: string;
   invalid: boolean;
   embed?: boolean;
+  onExportRequested?: (invitationId: string, renderId: string) => void;
 };
 
-function Controls({ input, photo, initialId, invalid, embed }: Props) {
+function Controls({ input, photo, initialId, invalid, embed, onExportRequested }: Props) {
   const { isLoaded, isSignedIn } = useAppAuth();
   const [quality, setQuality] = useState<ExportQuality>("free");
+  const exportedRenderId = useRef<string>();
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -47,6 +49,12 @@ function Controls({ input, photo, initialId, invalid, embed }: Props) {
       JSON.stringify({ type: "AUTH_EXPIRED" }),
     );
   }, [embed, isLoaded, isSignedIn]);
+  useEffect(() => {
+    if (embed && exportVideo.data && exportedRenderId.current !== exportVideo.data.id) {
+      exportedRenderId.current = exportVideo.data.id;
+      onExportRequested?.(exportVideo.data.invitationId, exportVideo.data.id);
+    }
+  }, [embed, exportVideo.data, onExportRequested]);
 
   function requestNativeAuthentication() {
     localStorage.setItem(

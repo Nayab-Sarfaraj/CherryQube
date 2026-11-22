@@ -12,6 +12,19 @@ export const renderRepository = {
     await connectDb();
     return Render.findOne({ _id: id, ownerClerkId }).lean();
   },
+  async getMany(ownerClerkId: string, ids: string[]) {
+    await connectDb();
+    if (!ids.length) return [];
+    return Render.find({ ownerClerkId, _id: { $in: ids } }).lean();
+  },
+  async retryById(ownerClerkId: string, id: string) {
+    await connectDb();
+    return Render.findOneAndUpdate(
+      { ownerClerkId, _id: id, status: "failed", attempts: { $lt: 3 } },
+      { $set: { status: "queued" }, $unset: { error: 1, startedAt: 1, attemptId: 1 } },
+      { returnDocument: "after" },
+    ).lean();
+  },
   async enqueue(
     ownerClerkId: string,
     invitationId: string,

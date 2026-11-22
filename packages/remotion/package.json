@@ -6,6 +6,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./templates": "./src/templates.ts",
+    "./mobile-template-catalog": "./src/mobile-template-catalog.ts",
     "./schema": "./src/schema.ts",
     "./composition": "./src/composition.tsx",
     "./themes": "./src/themes.ts"

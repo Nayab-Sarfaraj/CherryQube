@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 const url = z.url().max(2048);
+const objectId = z.string().regex(/^[a-f\d]{24}$/i);
 
 export const webToNativeBridgeSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("PHOTO_PICKED"), request: z.literal(true) }),
@@ -14,6 +15,13 @@ export const webToNativeBridgeSchema = z.discriminatedUnion("type", [
     linkUrl: url.optional(),
   }),
   z.object({ type: z.literal("REQUEST_PAYWALL") }),
+  z.object({
+    type: z.literal("EXPORT_REQUESTED"),
+    invitationId: objectId,
+    renderId: objectId,
+  }),
+  z.object({ type: z.literal("CLOSE_EDITOR") }),
+  z.object({ type: z.literal("EDITOR_DIRTY_CHANGED"), dirty: z.boolean() }),
 ]);
 
 export const nativeToWebBridgeSchema = z.discriminatedUnion("type", [

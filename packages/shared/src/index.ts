@@ -1,5 +1,6 @@
 export * from "./design-tokens";
 export * from "./mobile-bridge";
+export * from "./template-order";
 export const MAX_VIDEO_SECONDS = 90;
 export const FPS = 30;
 export const VIDEO_SIZE = { width: 1080, height: 1920 } as const;

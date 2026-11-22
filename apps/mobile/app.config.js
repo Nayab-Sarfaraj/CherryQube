@@ -9,4 +9,5 @@ module.exports = () => ({
     EXPO_PUBLIC_CLERK_GOOGLE_ANDROID_CLIENT_ID:
       process.env.EXPO_PUBLIC_CLERK_GOOGLE_ANDROID_CLIENT_ID,
   },
+  plugins: [...app.expo.plugins, "expo-video"],
 });

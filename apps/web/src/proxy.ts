@@ -4,7 +4,7 @@ import {
   type NextRequest,
   type NextFetchEvent,
 } from "next/server";
-import { authEnabled, getAuthConfig } from "./server/lib/config";
+import { authEnabled } from "./server/lib/config";
 import { NotFoundError } from "./server/lib/errors";
 import { resultService } from "./server/modules/results/result.service";
 import { shouldServeMarkdown } from "./lib/md/negotiate";
@@ -116,10 +116,7 @@ export default async function proxy(
     );
   }
 
-  const clerkRes = await clerkMiddleware({
-    publishableKey: getAuthConfig().publishableKey,
-    secretKey: getAuthConfig().secretKey,
-  })(request, event);
+  const clerkRes = await clerkMiddleware()(request, event);
 
   if (clerkRes) {
     return withMobileAuthSecurity(withDescribedBy(clerkRes, origin), pathname);

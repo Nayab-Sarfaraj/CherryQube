@@ -21,7 +21,15 @@ export function createInvitationService(
     if (!/^[a-f0-9]{24}$/i.test(id)) throw new NotFoundError();
   }
   return {
-    list: (owner: string) => repository.list(owner),
+    async list(owner: string, limit = 50, cursor?: string) {
+      const rows = await repository.list(owner, limit, cursor);
+      const hasNextPage = rows.length > limit;
+      const items = hasNextPage ? rows.slice(0, -1) : rows;
+      return {
+        items,
+        nextCursor: hasNextPage ? String(items.at(-1)?._id) : null,
+      };
+    },
     async get(owner: string, id: string) {
       checkId(id);
       const item = await repository.get(owner, id);

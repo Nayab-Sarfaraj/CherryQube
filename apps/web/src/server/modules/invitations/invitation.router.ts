@@ -5,12 +5,39 @@ import { validate } from "../../lib/validation";
 import { invitationInput } from "./invitation.schema";
 import { invitationService } from "./invitation.service";
 import { invitationDto } from "./invitation.mapper";
+import { renderRepository } from "../renders/render.repository";
 type Context = { params: Promise<{ id: string }> };
-export async function list() {
+function listRequest(url: string) {
+  const params = new URL(url).searchParams;
+  const limit = Number(params.get("limit") ?? "50");
+  if (!Number.isInteger(limit) || limit < 1 || limit > 100)
+    throw new Error("Invalid invitation list limit");
+  const cursor = params.get("cursor") ?? undefined;
+  if (cursor && !/^[a-f0-9]{24}$/i.test(cursor))
+    throw new Error("Invalid invitation list cursor");
+  return { limit, cursor };
+}
+
+async function withRenders(owner: string, items: Record<string, unknown>[]) {
+  const ids = items
+    .flatMap((item) => [item.pendingRenderId, item.publishedRenderId])
+    .filter((id): id is string => typeof id === "string");
+  const renders = await renderRepository.getMany(owner, ids);
+  const byId = new Map(renders.map((render) => [String(render._id), render]));
+  return items.map((item) =>
+    invitationDto(
+      item,
+      byId.get(String(item.pendingRenderId ?? item.publishedRenderId)) ?? null,
+    ),
+  );
+}
+
+export async function list(request: Request) {
   try {
-    return Response.json(
-      (await invitationService.list(await requireUser())).map(invitationDto),
-    );
+    const owner = await requireUser();
+    const { limit, cursor } = listRequest(request.url);
+    const page = await invitationService.list(owner, limit, cursor);
+    return Response.json({ ...page, items: await withRenders(owner, page.items) });
   } catch (error) {
     return errorResponse(error);
   }
@@ -29,14 +56,9 @@ export async function create(request: Request) {
 }
 export async function get(_request: Request, context: Context) {
   try {
-    return Response.json(
-      invitationDto(
-        await invitationService.get(
-          await requireUser(),
-          (await context.params).id,
-        ),
-      ),
-    );
+    const owner = await requireUser();
+    const item = await invitationService.get(owner, (await context.params).id);
+    return Response.json((await withRenders(owner, [item]))[0]);
   } catch (error) {
     return errorResponse(error);
   }
