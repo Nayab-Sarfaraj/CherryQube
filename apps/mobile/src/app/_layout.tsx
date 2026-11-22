@@ -11,6 +11,7 @@ import { View } from "react-native";
 import { CLERK_PUBLISHABLE_KEY } from "@/lib/mobile-config";
 import { useMobileAuth } from "@/hooks/use-mobile-auth";
 import { mobileTheme } from "@/theme/theme";
+import { clearCacheForUserChange } from "@/services/api/query-cache";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -19,7 +20,7 @@ function QueryProvider({ children }: { children: ReactNode }) {
   const { userId } = useMobileAuth();
   const previousUser = useRef<string | null | undefined>(undefined);
   useEffect(() => {
-    if (previousUser.current !== undefined && previousUser.current !== userId) client.clear();
+    clearCacheForUserChange(client, previousUser.current, userId);
     previousUser.current = userId;
   }, [client, userId]);
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;

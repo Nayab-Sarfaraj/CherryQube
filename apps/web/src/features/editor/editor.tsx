@@ -403,10 +403,10 @@ export default function Editor({
               <select
                 id="contact-method"
                 value={contactMethod}
-                onChange={(event) =>
+                onChange={(event) => {
                   setContactMethod(event.target.value as ContactMethod);
                   setDirty(true);
-                }
+                }}
                 className="mt-2 w-full rounded-lg border p-3"
               >
                 <option value="email">Email</option>

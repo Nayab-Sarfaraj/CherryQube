@@ -21,7 +21,7 @@ type Props = {
 function Controls({ input, photo, initialId, invalid, embed, onExportRequested }: Props) {
   const { isLoaded, isSignedIn } = useAppAuth();
   const [quality, setQuality] = useState<ExportQuality>("free");
-  const exportedRenderId = useRef<string>();
+  const exportedRenderId = useRef<string | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => {

@@ -16,6 +16,7 @@ function setup() {
     find: vi.fn().mockResolvedValue(null),
     enqueue: vi.fn().mockResolvedValue({ status: "queued" }),
     retry: vi.fn(),
+    retryById: vi.fn(),
     get: vi.fn(),
     sweep: vi.fn(),
   };
@@ -107,6 +108,32 @@ describe("render safeguards", () => {
     await expect(t.service.request("owner", "id")).rejects.toThrow(
       "retry limit",
     );
+  });
+  it("requeues a failed render by its id without reserving another credit", async () => {
+    const t = setup();
+    const failed = {
+      _id: "a".repeat(24),
+      invitationId: "b".repeat(24),
+      status: "failed",
+      attempts: 1,
+      tier: "hd",
+    };
+    t.renders.get.mockResolvedValue(failed);
+    t.renders.retryById.mockResolvedValue({ ...failed, status: "queued" });
+    await expect(t.service.retry("owner", "a".repeat(24))).resolves.toMatchObject({
+      status: "queued",
+      tier: "hd",
+    });
+    expect(t.reserveHd).not.toHaveBeenCalled();
+    expect(t.renders.retryById).toHaveBeenCalledWith("owner", "a".repeat(24));
+    expect(t.bindResult).toHaveBeenCalledOnce();
+  });
+  it("returns an in-progress retry unchanged, making retry idempotent", async () => {
+    const t = setup();
+    const queued = { _id: "a".repeat(24), status: "queued", attempts: 1 };
+    t.renders.get.mockResolvedValue(queued);
+    await expect(t.service.retry("owner", "a".repeat(24))).resolves.toBe(queued);
+    expect(t.renders.retryById).not.toHaveBeenCalled();
   });
   it("separates render hashes by owner", async () => {
     const t = setup();
