@@ -10,8 +10,6 @@ import {
   RefreshControl,
   StyleSheet,
   Text,
-  type TextStyle,
-  type ViewStyle,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -20,6 +18,8 @@ import {
   useDeleteCreation,
 } from "@/features/creations/use-creations";
 import { FloralSprig } from "@/components/ui/floral-sprig";
+import { PillBadge, type PillBadgeVariant } from "@/components/ui/pill-badge";
+import { PrimaryButton } from "@/components/ui/primary-button";
 import { useMobileAuth } from "@/hooks/use-mobile-auth";
 import { useScreenActivity } from "@/hooks/use-screen-activity";
 import { WEB_ORIGIN } from "@/lib/mobile-config";
@@ -108,20 +108,21 @@ export default function CreationsTab() {
     return (
       <SafeAreaView edges={["top"]} style={styles.safe}>
         <View style={styles.contentContainer}>
-          <FloralSprig size={48} style={styles.authSprig} />
-          <Text style={styles.title}>Keep your celebrations close.</Text>
-          <Text style={styles.copy}>
-            Sign in to revisit your saved cards and invitations from any
-            device.
-          </Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Sign in to your account"
-            onPress={() => router.push("/(modals)/sign-in")}
-            style={styles.primaryButton}
-          >
-            <Text style={styles.primaryButtonText}>Sign in</Text>
-          </Pressable>
+          <View style={[styles.authCard, mobileTheme.shadows.cardElevated]}>
+            <FloralSprig size={44} style={styles.authSprig} />
+            <Text style={styles.authTitle}>Keep your celebrations close.</Text>
+            <Text style={styles.authCopy}>
+              Sign in to revisit your saved cards and invitations from any
+              device.
+            </Text>
+            <PrimaryButton
+              label="Sign in"
+              size="lg"
+              variant="primary"
+              style={styles.authButton}
+              onPress={() => router.push("/(modals)/sign-in")}
+            />
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -149,10 +150,10 @@ export default function CreationsTab() {
         ListHeaderComponent={
           <View style={styles.header}>
             <View style={styles.headerBrandRow}>
-              <FloralSprig size={28} />
-              <Text style={styles.kicker}>CherryQube</Text>
+              <FloralSprig size={22} />
+              <Text style={styles.kicker}>CHERRYQUBE</Text>
             </View>
-            <Text style={styles.title}>My creations</Text>
+            <Text style={styles.title}>My Creations</Text>
             <Text style={styles.copy}>
               Manage your saved cards, monitor exports, and share links.
             </Text>
@@ -168,38 +169,34 @@ export default function CreationsTab() {
               <Text style={styles.emptyText}>Loading creations…</Text>
             </View>
           ) : error ? (
-            <View style={styles.emptyContainer}>
+            <View style={styles.emptyCard}>
               <Text style={styles.errorTitle}>Could not load creations</Text>
               <Text style={styles.errorCopy}>
                 {error instanceof Error
                   ? error.message
                   : "Please check your network connection and try again."}
               </Text>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Retry loading creations"
+              <PrimaryButton
+                label="Retry"
+                size="md"
+                variant="outline"
                 onPress={() => void refetch()}
-                style={styles.retryButton}
-              >
-                <Text style={styles.retryButtonText}>Retry</Text>
-              </Pressable>
+              />
             </View>
           ) : (
-            <View style={styles.emptyContainer}>
-              <FloralSprig size={48} style={{ marginBottom: 12 }} />
+            <View style={[styles.emptyCard, mobileTheme.shadows.card]}>
+              <FloralSprig size={40} style={{ marginBottom: 12 }} />
               <Text style={styles.emptyTitle}>No creations yet</Text>
               <Text style={styles.emptyText}>
                 You haven’t created any greetings or invitations yet. Browse our
                 holiday templates to get started!
               </Text>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Choose a template"
+              <PrimaryButton
+                label="Browse templates"
+                size="md"
+                variant="primary"
                 onPress={() => router.push("/")}
-                style={styles.browseButton}
-              >
-                <Text style={styles.browseButtonText}>Browse templates</Text>
-              </Pressable>
+              />
             </View>
           )
         }
@@ -235,11 +232,12 @@ export default function CreationsTab() {
                 })
               }
               style={({ pressed }) => [
-                styles.card,
+                styles.creationCard,
+                mobileTheme.shadows.card,
                 pressed && styles.cardPressed,
               ]}
             >
-              <View style={styles.cardHeader}>
+              <View style={styles.cardMainRow}>
                 {poster ? (
                   <Image
                     source={poster}
@@ -249,6 +247,7 @@ export default function CreationsTab() {
                   />
                 ) : (
                   <View style={styles.posterPlaceholder}>
+                    <FloralSprig size={20} />
                     <Text style={styles.posterPlaceholderText}>
                       {typeLabel}
                     </Text>
@@ -284,6 +283,21 @@ export default function CreationsTab() {
                 >
                   <Text style={styles.deleteButtonText}>Delete</Text>
                 </Pressable>
+
+                <PrimaryButton
+                  label="View details"
+                  size="sm"
+                  variant="secondary"
+                  onPress={() =>
+                    router.push({
+                      pathname: "/creation/[id]",
+                      params: {
+                        id: item.id,
+                        renderId: item.currentRender?.id,
+                      },
+                    })
+                  }
+                />
               </View>
             </Pressable>
           );
@@ -294,65 +308,82 @@ export default function CreationsTab() {
 }
 
 function StatusBadge({ status }: { status: string }) {
-  let badgeStyle: ViewStyle = styles.badgeDraft;
-  let textStyle: TextStyle = styles.badgeTextDraft;
+  let variant: PillBadgeVariant = "draft";
   let label = "Draft";
 
   if (status === "queued" || status === "rendering") {
-    badgeStyle = styles.badgeRendering;
-    textStyle = styles.badgeTextRendering;
+    variant = "rendering";
     label = "Rendering";
   } else if (status === "ready") {
-    badgeStyle = styles.badgeReady;
-    textStyle = styles.badgeTextReady;
+    variant = "ready";
     label = "Ready";
   } else if (status === "failed") {
-    badgeStyle = styles.badgeFailed;
-    textStyle = styles.badgeTextFailed;
+    variant = "failed";
     label = "Failed";
   }
 
-  return (
-    <View style={[styles.badgeBase, badgeStyle]}>
-      <Text style={[styles.badgeTextBase, textStyle]}>{label}</Text>
-    </View>
-  );
+  return <PillBadge label={label} variant={variant} size="sm" />;
 }
 
 const styles = StyleSheet.create({
   safe: {
+    backgroundColor: mobileTheme.colors.canvas,
     flex: 1,
-    backgroundColor: mobileTheme.colors.background,
   },
   centerContainer: {
+    alignItems: "center",
     flex: 1,
     justifyContent: "center",
-    alignItems: "center",
     padding: 24,
   },
   contentContainer: {
     flex: 1,
     justifyContent: "center",
-    padding: 24,
+    padding: 20,
   },
-  authSprig: { marginBottom: 16 },
+  authCard: {
+    alignItems: "center",
+    backgroundColor: mobileTheme.colors.surface,
+    borderColor: mobileTheme.colors.hairline,
+    borderRadius: mobileTheme.radius.card,
+    borderWidth: 1,
+    padding: 28,
+  },
+  authSprig: {
+    marginBottom: 16,
+  },
+  authTitle: {
+    color: mobileTheme.colors.ink,
+    fontFamily: "Fraunces_600SemiBold",
+    fontSize: 24,
+    lineHeight: 30,
+    textAlign: "center",
+  },
+  authCopy: {
+    color: mobileTheme.colors.quietInk,
+    fontFamily: "Figtree_400Regular",
+    fontSize: 14,
+    lineHeight: 22,
+    marginTop: 8,
+    textAlign: "center",
+  },
+  authButton: {
+    marginTop: 22,
+    width: "100%",
+  },
   statusText: {
     color: mobileTheme.colors.ink,
     fontFamily: "Figtree_500Medium",
-    fontSize: 16,
+    fontSize: 15,
     marginTop: 12,
   },
   listContainer: {
-    padding: 20,
+    padding: 16,
     paddingBottom: 40,
   },
   header: {
-    backgroundColor: mobileTheme.colors.palette.marigold + "1A",
-    borderColor: mobileTheme.colors.border + "44",
-    borderRadius: 24,
-    borderWidth: 1,
     marginBottom: 20,
-    padding: 20,
+    paddingTop: 8,
   },
   headerBrandRow: {
     alignItems: "center",
@@ -360,73 +391,61 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   kicker: {
-    color: mobileTheme.colors.muted,
-    fontFamily: "Figtree_600SemiBold",
+    color: mobileTheme.colors.ink,
+    fontFamily: "Fraunces_600SemiBold",
     fontSize: 16,
-    marginTop: 10,
+    letterSpacing: 1.1,
   },
   title: {
     color: mobileTheme.colors.ink,
     fontFamily: "Fraunces_600SemiBold",
-    fontSize: 32,
-    lineHeight: 38,
-    marginTop: 6,
-  },
-  copy: {
-    color: mobileTheme.colors.ink,
-    fontFamily: "Figtree_400Regular",
-    fontSize: 16,
-    lineHeight: 24,
+    fontSize: 28,
+    lineHeight: 34,
     marginTop: 8,
   },
-  primaryButton: {
-    backgroundColor: mobileTheme.colors.accent,
-    borderRadius: 999,
-    minHeight: 48,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 24,
-    paddingHorizontal: 24,
+  copy: {
+    color: mobileTheme.colors.quietInk,
+    fontFamily: "Figtree_400Regular",
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: 6,
   },
-  primaryButtonText: {
-    color: mobileTheme.colors.surface,
-    fontFamily: "Figtree_600SemiBold",
-    fontSize: 16,
-  },
-  card: {
+  creationCard: {
     backgroundColor: mobileTheme.colors.surface,
-    borderColor: mobileTheme.colors.border + "88",
+    borderColor: mobileTheme.colors.hairline,
+    borderRadius: mobileTheme.radius.card,
     borderWidth: 1,
-    borderRadius: 20,
-    padding: 16,
     marginBottom: 14,
+    overflow: "hidden",
+    padding: 14,
   },
   cardPressed: {
-    opacity: 0.9,
+    opacity: 0.92,
   },
-  cardHeader: {
+  cardMainRow: {
     flexDirection: "row",
     gap: 14,
   },
   posterThumbnail: {
-    width: 68,
-    height: 96,
-    borderRadius: 12,
-    backgroundColor: mobileTheme.colors.border,
+    aspectRatio: 0.72,
+    backgroundColor: mobileTheme.colors.surfaceMuted,
+    borderRadius: 14,
+    height: 110,
   },
   posterPlaceholder: {
-    width: 68,
-    height: 96,
-    borderRadius: 12,
-    backgroundColor: mobileTheme.colors.border,
     alignItems: "center",
+    aspectRatio: 0.72,
+    backgroundColor: mobileTheme.colors.surfaceMuted,
+    borderRadius: 14,
+    height: 110,
     justifyContent: "center",
-    padding: 4,
+    padding: 6,
   },
   posterPlaceholderText: {
-    color: mobileTheme.colors.muted,
+    color: mobileTheme.colors.quietInk,
     fontFamily: "Figtree_500Medium",
     fontSize: 11,
+    marginTop: 4,
     textAlign: "center",
   },
   cardContent: {
@@ -434,89 +453,62 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   tagRow: {
-    flexDirection: "row",
     alignItems: "center",
+    flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: 4,
   },
   metaText: {
-    color: mobileTheme.colors.muted,
+    color: mobileTheme.colors.quietInk,
     fontFamily: "Figtree_500Medium",
-    fontSize: 13,
+    fontSize: 12,
   },
   cardTitle: {
     color: mobileTheme.colors.ink,
     fontFamily: "Fraunces_600SemiBold",
-    fontSize: 18,
+    fontSize: 17,
     lineHeight: 22,
     marginBottom: 4,
   },
   dateText: {
-    color: mobileTheme.colors.muted,
+    color: mobileTheme.colors.quietInk,
     fontFamily: "Figtree_400Regular",
     fontSize: 12,
   },
   cardActions: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
     alignItems: "center",
-    marginTop: 10,
-    borderTopColor: mobileTheme.colors.border + "66",
-    borderTopWidth: StyleSheet.hairlineWidth,
-    paddingTop: 8,
+    borderTopColor: mobileTheme.colors.hairline,
+    borderTopWidth: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 12,
+    paddingTop: 10,
   },
   deleteButton: {
-    borderColor: mobileTheme.colors.border + "55",
-    borderRadius: 999,
-    borderWidth: 1,
-    minHeight: 48,
-    paddingHorizontal: 12,
-    justifyContent: "center",
     alignItems: "center",
+    justifyContent: "center",
+    minHeight: 36,
+    paddingHorizontal: 8,
   },
   deleteButtonText: {
-    color: mobileTheme.colors.accent,
-    fontFamily: "Figtree_600SemiBold",
-    fontSize: 14,
-  },
-  badgeBase: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-  },
-  badgeTextBase: {
-    fontSize: 11,
-    fontFamily: "Figtree_600SemiBold",
-    textTransform: "capitalize",
-  },
-  badgeDraft: {
-    backgroundColor: mobileTheme.colors.status.draftBg,
-  },
-  badgeTextDraft: {
-    color: mobileTheme.colors.status.draftText,
-  },
-  badgeRendering: {
-    backgroundColor: mobileTheme.colors.status.renderingBg,
-  },
-  badgeTextRendering: {
-    color: mobileTheme.colors.status.renderingText,
-  },
-  badgeReady: {
-    backgroundColor: mobileTheme.colors.status.readyBg,
-  },
-  badgeTextReady: {
-    color: mobileTheme.colors.status.readyText,
-  },
-  badgeFailed: {
-    backgroundColor: mobileTheme.colors.status.failedBg,
-  },
-  badgeTextFailed: {
     color: mobileTheme.colors.status.failedText,
+    fontFamily: "Figtree_500Medium",
+    fontSize: 13,
   },
   emptyContainer: {
-    padding: 32,
     alignItems: "center",
     justifyContent: "center",
+    padding: 32,
+  },
+  emptyCard: {
+    alignItems: "center",
+    backgroundColor: mobileTheme.colors.surface,
+    borderColor: mobileTheme.colors.hairline,
+    borderRadius: mobileTheme.radius.card,
+    borderWidth: 1,
+    justifyContent: "center",
+    marginTop: 12,
+    padding: 28,
   },
   emptyTitle: {
     color: mobileTheme.colors.ink,
@@ -526,25 +518,12 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   emptyText: {
-    color: mobileTheme.colors.ink,
+    color: mobileTheme.colors.quietInk,
     fontFamily: "Figtree_400Regular",
-    fontSize: 15,
+    fontSize: 14,
     lineHeight: 22,
+    marginBottom: 18,
     textAlign: "center",
-    marginBottom: 16,
-  },
-  browseButton: {
-    backgroundColor: mobileTheme.colors.accent,
-    borderRadius: 999,
-    minHeight: 48,
-    paddingHorizontal: 20,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  browseButtonText: {
-    color: mobileTheme.colors.surface,
-    fontFamily: "Figtree_600SemiBold",
-    fontSize: 15,
   },
   errorTitle: {
     color: mobileTheme.colors.accent,
@@ -557,25 +536,11 @@ const styles = StyleSheet.create({
     fontFamily: "Figtree_400Regular",
     fontSize: 14,
     lineHeight: 20,
-    textAlign: "center",
     marginBottom: 16,
-  },
-  retryButton: {
-    borderColor: mobileTheme.colors.accent,
-    borderWidth: 1,
-    borderRadius: 999,
-    minHeight: 48,
-    paddingHorizontal: 20,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  retryButtonText: {
-    color: mobileTheme.colors.accent,
-    fontFamily: "Figtree_600SemiBold",
-    fontSize: 14,
+    textAlign: "center",
   },
   footerLoader: {
-    paddingVertical: 16,
     alignItems: "center",
+    paddingVertical: 16,
   },
 });

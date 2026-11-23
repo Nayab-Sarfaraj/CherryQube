@@ -15,6 +15,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { FloralSprig } from "@/components/ui/floral-sprig";
+import { PillBadge } from "@/components/ui/pill-badge";
+import { PrimaryButton } from "@/components/ui/primary-button";
 import { useCreationDetail } from "@/features/creations/use-creations";
 import {
   GuestAddForm,
@@ -106,12 +108,12 @@ export default function GuestsScreen() {
           >
             <Text style={styles.backButtonText}>← Back</Text>
           </Pressable>
-          <Text style={styles.headerTitle}>Guests</Text>
+          <Text style={styles.headerTitle}>Guest Links</Text>
           <View style={styles.headerSpacer} />
         </View>
         <View style={styles.centeredContent}>
           <ActivityIndicator size="small" color={mobileTheme.colors.accent} />
-          <Text style={styles.loadingText}>Loading invitation...</Text>
+          <Text style={styles.loadingText}>Loading invitation…</Text>
         </View>
       </SafeAreaView>
     );
@@ -130,24 +132,25 @@ export default function GuestsScreen() {
           >
             <Text style={styles.backButtonText}>← Back</Text>
           </Pressable>
-          <Text style={styles.headerTitle}>Guests</Text>
+          <Text style={styles.headerTitle}>Guest Links</Text>
           <View style={styles.headerSpacer} />
         </View>
         <View style={styles.centeredContent}>
-          <Text style={styles.emptyTitle}>Could not load invitation</Text>
-          <Text style={styles.emptySubtitle}>
-            {creationError instanceof Error
-              ? creationError.message
-              : "Unable to verify this invitation."}
-          </Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Retry loading invitation"
-            onPress={() => void refetchCreation()}
-            style={styles.actionPill}
-          >
-            <Text style={styles.actionPillText}>Try again</Text>
-          </Pressable>
+          <View style={[styles.errorCard, mobileTheme.shadows.cardElevated]}>
+            <Text style={styles.emptyTitle}>Could not load invitation</Text>
+            <Text style={styles.emptySubtitle}>
+              {creationError instanceof Error
+                ? creationError.message
+                : "Unable to verify this invitation."}
+            </Text>
+            <PrimaryButton
+              label="Try again"
+              size="md"
+              variant="primary"
+              onPress={() => void refetchCreation()}
+              style={{ width: "100%", marginTop: 16 }}
+            />
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -166,23 +169,24 @@ export default function GuestsScreen() {
           >
             <Text style={styles.backButtonText}>← Back</Text>
           </Pressable>
-          <Text style={styles.headerTitle}>Guests</Text>
+          <Text style={styles.headerTitle}>Guest Links</Text>
           <View style={styles.headerSpacer} />
         </View>
         <View style={styles.centeredContent}>
-          <Text style={styles.emptyTitle}>Cards do not have guest lists</Text>
-          <Text style={styles.emptySubtitle}>
-            Personalized guest links are designed exclusively for video
-            invitations.
-          </Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Return to card detail"
-            onPress={() => router.back()}
-            style={styles.actionPill}
-          >
-            <Text style={styles.actionPillText}>Back to Card</Text>
-          </Pressable>
+          <View style={[styles.errorCard, mobileTheme.shadows.cardElevated]}>
+            <Text style={styles.emptyTitle}>Cards do not have guest lists</Text>
+            <Text style={styles.emptySubtitle}>
+              Personalized guest links are designed exclusively for video
+              invitations.
+            </Text>
+            <PrimaryButton
+              label="Back to card"
+              size="md"
+              variant="primary"
+              onPress={() => router.back()}
+              style={{ width: "100%", marginTop: 16 }}
+            />
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -206,7 +210,11 @@ export default function GuestsScreen() {
           </Pressable>
           <View style={styles.headerTitleWrap}>
             <Text style={styles.headerTitle}>Guest Links</Text>
-            <Text style={styles.headerBadge}>{guests.length} / 200</Text>
+            <PillBadge
+              label={`${guests.length}/200`}
+              variant="ready"
+              size="sm"
+            />
           </View>
           <View style={styles.headerSpacer} />
         </View>
@@ -249,33 +257,24 @@ export default function GuestsScreen() {
 
               {guests.length > 0 && (
                 <View style={styles.batchActionsRow}>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="Copy all guest links"
+                  <PrimaryButton
+                    label={copiedAll ? "Copied all!" : "Copy all links"}
+                    size="sm"
+                    variant="secondary"
+                    style={{ flex: 1 }}
                     onPress={handleCopyAll}
-                    style={styles.batchButton}
-                  >
-                    <Text style={styles.batchButtonText}>
-                      {copiedAll ? "Copied all!" : "Copy all (Name: Link)"}
-                    </Text>
-                  </Pressable>
+                  />
 
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="Delete all guest links"
+                  <PrimaryButton
+                    label={
+                      deleteAllGuests.isPending ? "Deleting…" : "Delete all"
+                    }
+                    size="sm"
+                    variant="outline"
+                    loading={deleteAllGuests.isPending}
+                    style={{ flex: 0.8 }}
                     onPress={handleDeleteAll}
-                    disabled={deleteAllGuests.isPending}
-                    style={[styles.batchButton, styles.batchDeleteButton]}
-                  >
-                    <Text
-                      style={[
-                        styles.batchButtonText,
-                        styles.batchDeleteButtonText,
-                      ]}
-                    >
-                      {deleteAllGuests.isPending ? "Deleting..." : "Delete all"}
-                    </Text>
-                  </Pressable>
+                  />
                 </View>
               )}
             </View>
@@ -296,28 +295,27 @@ export default function GuestsScreen() {
                   size="small"
                   color={mobileTheme.colors.accent}
                 />
-                <Text style={styles.loadingText}>Loading guest list...</Text>
+                <Text style={styles.loadingText}>Loading guest list…</Text>
               </View>
             ) : isGuestsError ? (
-              <View style={styles.centeredContent}>
+              <View style={[styles.errorCard, mobileTheme.shadows.card]}>
                 <Text style={styles.emptyTitle}>Could not load guests</Text>
                 <Text style={styles.emptySubtitle}>
                   {guestsError instanceof Error
                     ? guestsError.message
                     : "Something went wrong loading guest links."}
                 </Text>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Retry loading guests"
+                <PrimaryButton
+                  label="Try again"
+                  size="sm"
+                  variant="primary"
                   onPress={() => void refetchGuests()}
-                  style={styles.actionPill}
-                >
-                  <Text style={styles.actionPillText}>Try again</Text>
-                </Pressable>
+                  style={{ marginTop: 12 }}
+                />
               </View>
             ) : (
-              <View style={styles.centeredContent}>
-                <FloralSprig size={40} style={{ marginBottom: 12 }} />
+              <View style={[styles.emptyCard, mobileTheme.shadows.card]}>
+                <FloralSprig size={38} style={{ marginBottom: 12 }} />
                 <Text style={styles.emptyTitle}>No guests added yet</Text>
                 <Text style={styles.emptySubtitle}>
                   Add guests above to generate unique invitation links for
@@ -334,35 +332,33 @@ export default function GuestsScreen() {
 
 const styles = StyleSheet.create({
   safe: {
+    backgroundColor: mobileTheme.colors.canvas,
     flex: 1,
-    backgroundColor: mobileTheme.colors.background,
   },
   keyboardContainer: {
     flex: 1,
   },
   headerBar: {
-    flexDirection: "row",
     alignItems: "center",
+    backgroundColor: mobileTheme.colors.canvas,
+    flexDirection: "row",
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: mobileTheme.colors.border + "44",
-    backgroundColor: mobileTheme.colors.palette.marigold + "14",
   },
   backButton: {
-    minHeight: 48,
-    minWidth: 48,
     justifyContent: "center",
+    minHeight: 44,
+    minWidth: 44,
   },
   backButtonText: {
-    color: mobileTheme.colors.accent,
+    color: mobileTheme.colors.ink,
     fontFamily: "Figtree_600SemiBold",
-    fontSize: 16,
+    fontSize: 15,
   },
   headerTitleWrap: {
-    flexDirection: "row",
     alignItems: "center",
+    flexDirection: "row",
     gap: 8,
   },
   headerTitle: {
@@ -370,102 +366,68 @@ const styles = StyleSheet.create({
     fontFamily: "Fraunces_600SemiBold",
     fontSize: 17,
   },
-  headerBadge: {
-    backgroundColor: mobileTheme.colors.status.readyBg,
-    color: mobileTheme.colors.status.readyText,
-    fontFamily: "Figtree_600SemiBold",
-    fontSize: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-    overflow: "hidden",
-  },
   headerSpacer: {
-    minWidth: 48,
+    minWidth: 44,
   },
   listContent: {
     padding: 16,
-    paddingBottom: 32,
+    paddingBottom: 40,
   },
   pageDescription: {
-    backgroundColor: mobileTheme.colors.palette.marigold + "1A",
-    borderColor: mobileTheme.colors.border + "55",
-    borderRadius: 18,
-    borderWidth: 1,
+    color: mobileTheme.colors.quietInk,
     fontFamily: "Figtree_400Regular",
     fontSize: 14,
     lineHeight: 20,
-    color: mobileTheme.colors.muted,
     marginBottom: 16,
-    padding: 16,
+    maxWidth: 320,
   },
   batchActionsRow: {
     flexDirection: "row",
-    gap: 8,
+    gap: 10,
     marginBottom: 16,
   },
-  batchButton: {
-    flex: 1,
-    minHeight: 48,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: mobileTheme.colors.border + "55",
-    backgroundColor: mobileTheme.colors.surface,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 10,
-  },
-  batchButtonText: {
-    fontFamily: "Figtree_600SemiBold",
-    fontSize: 13,
-    color: mobileTheme.colors.ink,
-  },
-  batchDeleteButton: {
-    flex: 0.6,
-    borderColor: mobileTheme.colors.status.failedBg,
-    backgroundColor: mobileTheme.colors.status.failedBg,
-  },
-  batchDeleteButtonText: {
-    color: mobileTheme.colors.status.failedText,
-  },
   centeredContent: {
-    paddingVertical: 40,
-    paddingHorizontal: 20,
     alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 40,
   },
   loadingText: {
-    marginTop: 10,
+    color: mobileTheme.colors.quietInk,
     fontFamily: "Figtree_400Regular",
     fontSize: 14,
-    color: mobileTheme.colors.muted,
+    marginTop: 10,
+  },
+  errorCard: {
+    alignItems: "center",
+    backgroundColor: mobileTheme.colors.surface,
+    borderColor: mobileTheme.colors.hairline,
+    borderRadius: mobileTheme.radius.card,
+    borderWidth: 1,
+    padding: 24,
+    width: "100%",
+  },
+  emptyCard: {
+    alignItems: "center",
+    backgroundColor: mobileTheme.colors.surface,
+    borderColor: mobileTheme.colors.hairline,
+    borderRadius: mobileTheme.radius.card,
+    borderWidth: 1,
+    marginTop: 12,
+    padding: 28,
   },
   emptyTitle: {
+    color: mobileTheme.colors.ink,
     fontFamily: "Fraunces_600SemiBold",
     fontSize: 18,
-    color: mobileTheme.colors.ink,
     marginBottom: 8,
     textAlign: "center",
   },
   emptySubtitle: {
+    color: mobileTheme.colors.quietInk,
     fontFamily: "Figtree_400Regular",
     fontSize: 14,
     lineHeight: 20,
-    color: mobileTheme.colors.muted,
-    textAlign: "center",
     maxWidth: 280,
-  },
-  actionPill: {
-    marginTop: 16,
-    minHeight: 48,
-    paddingHorizontal: 20,
-    borderRadius: 24,
-    backgroundColor: mobileTheme.colors.accent,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  actionPillText: {
-    fontFamily: "Figtree_600SemiBold",
-    fontSize: 14,
-    color: mobileTheme.colors.surface,
+    textAlign: "center",
   },
 });
