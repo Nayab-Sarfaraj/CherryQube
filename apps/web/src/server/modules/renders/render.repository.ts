@@ -155,4 +155,61 @@ export const renderRepository = {
       .sort({ updatedAt: -1 })
       .lean();
   },
+  async updateLambdaJob(
+    id: string,
+    lambdaRenderId: string,
+    bucketName: string,
+  ) {
+    await connectDb();
+    return Render.findByIdAndUpdate(
+      id,
+      {
+        $set: {
+          status: "rendering",
+          lambdaRenderId,
+          bucketName,
+          startedAt: new Date(),
+          progress: 5,
+        },
+      },
+      { returnDocument: "after" },
+    ).lean();
+  },
+  async updateProgress(id: string, progress: number) {
+    await connectDb();
+    return Render.findByIdAndUpdate(
+      id,
+      { $set: { progress } },
+      { returnDocument: "after" },
+    ).lean();
+  },
+  async completeLambda(id: string, fileUrl: string, posterUrl?: string) {
+    await connectDb();
+    return Render.findByIdAndUpdate(
+      id,
+      {
+        $set: {
+          status: "ready",
+          fileUrl,
+          ...(posterUrl ? { posterUrl } : {}),
+          progress: 100,
+          completedAt: new Date(),
+        },
+      },
+      { returnDocument: "after" },
+    ).lean();
+  },
+  async failLambda(id: string, error: string) {
+    await connectDb();
+    return Render.findByIdAndUpdate(
+      id,
+      {
+        $set: {
+          status: "failed",
+          error,
+        },
+      },
+      { returnDocument: "after" },
+    ).lean();
+  },
 };

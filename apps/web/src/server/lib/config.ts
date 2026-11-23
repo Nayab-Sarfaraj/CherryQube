@@ -110,3 +110,23 @@ export function llmSettings() {
     timeoutMs: 15000,
   };
 }
+
+export function remotionLambdaEnabled(): boolean {
+  return Boolean(
+    process.env.REMOTION_AWS_FUNCTION_NAME &&
+    process.env.REMOTION_SERVE_URL &&
+    (process.env.REMOTION_BUCKET_NAME || process.env.S3_BUCKET),
+  );
+}
+
+export function remotionLambdaConfig() {
+  if (!remotionLambdaEnabled()) return null;
+  const rawRegion =
+    process.env.REMOTION_AWS_REGION || process.env.AWS_REGION || "us-east-1";
+  return {
+    region: rawRegion,
+    functionName: process.env.REMOTION_AWS_FUNCTION_NAME!,
+    serveUrl: process.env.REMOTION_SERVE_URL!,
+    bucketName: (process.env.REMOTION_BUCKET_NAME || process.env.S3_BUCKET)!,
+  };
+}

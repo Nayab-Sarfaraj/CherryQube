@@ -14,6 +14,9 @@ export interface RenderRecord {
   fileUrl?: string;
   posterUrl?: string;
   error?: string;
+  lambdaRenderId?: string;
+  bucketName?: string;
+  progress?: number;
   attempts: number;
   attemptId?: string;
   startedAt?: Date;
@@ -40,6 +43,9 @@ const schema = new Schema<RenderRecord>(
     fileUrl: String,
     posterUrl: String,
     error: String,
+    lambdaRenderId: String,
+    bucketName: String,
+    progress: { type: Number, default: 0 },
     attempts: { type: Number, default: 0 },
     attemptId: String,
     startedAt: Date,

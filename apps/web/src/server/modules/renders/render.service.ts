@@ -1,4 +1,4 @@
-import { paymentSettings } from "../../lib/config";
+import { paymentSettings, remotionLambdaEnabled } from "../../lib/config";
 import {
   paidRenderRepository,
   RenderRetryLimit,
@@ -12,6 +12,8 @@ import { invitationService } from "../invitations/invitation.service";
 import { renderRepository } from "./render.repository";
 import { invitationInput } from "../invitations/invitation.schema";
 import { assertOwnedPhoto } from "../../integrations/local-storage.client";
+import { createRemotionLambdaClient } from "../../integrations/remotion-lambda.client";
+import { log } from "../../lib/logger";
 import {
   NotFoundError,
   ValidationError,
@@ -37,6 +39,8 @@ const defaultDependencies = {
   bindResult,
   reserveHd: paidRenderRepository.reserve,
   environment: () => paymentSettings().environment,
+  isLambdaEnabled: remotionLambdaEnabled,
+  getLambdaClient: createRemotionLambdaClient,
 };
 export function createRenderService(deps: typeof defaultDependencies) {
   return {
@@ -125,14 +129,73 @@ export function createRenderService(deps: typeof defaultDependencies) {
         return retried;
       }
       const job = await deps.renders.enqueue(owner, id, propsHash, input);
-      if (job) await deps.bindResult(owner, id, job);
+      if (job) {
+        await deps.bindResult(owner, id, job);
+        if (deps.isLambdaEnabled?.()) {
+          try {
+            const lambda = deps.getLambdaClient();
+            const { renderId, bucketName } = await lambda.renderMedia(
+              input,
+              quality,
+            );
+            const updated = await deps.renders.updateLambdaJob(
+              String(job._id),
+              renderId,
+              bucketName,
+            );
+            if (updated) {
+              await deps.bindResult(owner, id, updated);
+              return updated;
+            }
+          } catch (error) {
+            log("error", "render.lambda.start-failed", {
+              id: String(job._id),
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
+        }
+      }
       return job;
     },
     async get(owner: string, id: string) {
       if (!/^[a-f0-9]{24}$/i.test(id)) throw new NotFoundError();
       await deps.renders.sweep();
-      const item = await deps.renders.get(owner, id);
+      let item = await deps.renders.get(owner, id);
       if (!item) throw new NotFoundError();
+
+      if (
+        item.status === "rendering" &&
+        item.lambdaRenderId &&
+        deps.isLambdaEnabled?.()
+      ) {
+        try {
+          const lambda = deps.getLambdaClient();
+          const progress = await lambda.getProgress(
+            item.lambdaRenderId,
+            item.bucketName ?? undefined,
+          );
+          if (progress.done && progress.fileUrl) {
+            item =
+              (await deps.renders.completeLambda(id, progress.fileUrl)) ?? item;
+            await publishResults(owner, id);
+          } else if (progress.error) {
+            item = (await deps.renders.failLambda(id, progress.error)) ?? item;
+          } else if (
+            typeof progress.progress === "number" &&
+            progress.progress !== item.progress
+          ) {
+            item =
+              (await deps.renders.updateProgress(id, progress.progress)) ??
+              item;
+          }
+        } catch (error) {
+          log("error", "render.lambda.progress-failed", {
+            id,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+
       if (item.status === "ready") await publishResults(owner, id);
       return item;
     },

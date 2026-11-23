@@ -206,7 +206,24 @@ export default function CreationDetailRoute() {
               color={mobileTheme.colors.accent}
               style={styles.spinner}
             />
-            <Text style={styles.stateTitle}>Your video is rendering</Text>
+            <Text style={styles.stateTitle}>
+              {typeof renderJob?.progress === "number" && renderJob.progress > 0
+                ? `Rendering your video (${renderJob.progress}%)`
+                : "Your video is rendering"}
+            </Text>
+            {typeof renderJob?.progress === "number" &&
+              renderJob.progress > 0 && (
+                <View style={styles.progressBarBg}>
+                  <View
+                    style={[
+                      styles.progressBarFill,
+                      {
+                        width: `${Math.min(100, Math.max(5, renderJob.progress))}%`,
+                      },
+                    ]}
+                  />
+                </View>
+              )}
             <Text style={styles.stateCopy}>
               We’re rendering your high-quality video. This usually takes under
               a minute. You can wait here or come back anytime.
@@ -421,6 +438,21 @@ const styles = StyleSheet.create({
     fontSize: 20,
     marginBottom: 8,
     textAlign: "center",
+  },
+  progressBarBg: {
+    backgroundColor: mobileTheme.colors.surfaceMuted,
+    borderColor: mobileTheme.colors.hairline,
+    borderRadius: mobileTheme.radius.pill,
+    borderWidth: 1,
+    height: 8,
+    marginVertical: 12,
+    overflow: "hidden",
+    width: "100%",
+  },
+  progressBarFill: {
+    backgroundColor: mobileTheme.colors.accent,
+    borderRadius: mobileTheme.radius.pill,
+    height: "100%",
   },
   stateCopy: {
     color: mobileTheme.colors.quietInk,

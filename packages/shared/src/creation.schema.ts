@@ -9,6 +9,7 @@ export const renderJobSchema = z.object({
   fileUrl: z.string().optional(),
   posterUrl: z.string().optional(),
   error: z.string().optional(),
+  progress: z.number().min(0).max(100).optional(),
 });
 
 export const hostContactSchema = z.object({
