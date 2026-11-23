@@ -39,6 +39,7 @@ export function PrimaryButton({
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ disabled: Boolean(disabled || loading) }}
+      accessibilityLabel={label}
       disabled={disabled || loading}
       style={({ pressed }) => [
         styles.button,

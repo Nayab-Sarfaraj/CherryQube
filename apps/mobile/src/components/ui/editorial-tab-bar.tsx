@@ -13,13 +13,24 @@ const tabContent = {
   account: { label: "Account", Icon: AccountTabIcon },
 } as const;
 
-type EditorialTabBarProps = {
+import {
+  triggerTabPress,
+  type TabBarNavigation,
+} from "./editorial-tab-bar-rules";
+
+export type { TabBarNavigation };
+
+export type EditorialTabBarProps = {
   state: { index: number; routes: { key: string; name: string }[] };
-  navigateToTab: (routeKey: string) => void;
+  navigation?: TabBarNavigation;
+  navigateToTab?: (routeKey: string) => void;
+  descriptors?: Record<string, unknown>;
+  insets?: { top?: number; right?: number; bottom?: number; left?: number };
 };
 
 export function EditorialTabBar({
   state,
+  navigation,
   navigateToTab,
 }: EditorialTabBarProps) {
   const { bottom } = useSafeAreaInsets();
@@ -34,7 +45,13 @@ export function EditorialTabBar({
         if (!content) return null;
         const focused = state.index === index;
         const { Icon } = content;
-        const onPress = () => navigateToTab(route.key);
+        const onPress = () =>
+          triggerTabPress({
+            route,
+            focused,
+            navigation,
+            navigateToTab,
+          });
 
         return (
           <Pressable
