@@ -138,67 +138,69 @@ export default function AccountTab() {
   if (!isSignedIn) {
     return (
       <SafeAreaView edges={["top"]} style={styles.safe}>
-        <View style={styles.header}>
-          <FloralSprig size={42} />
-          <Text style={styles.title}>Your account</Text>
-          <Text style={styles.headerCopy}>
-            Your saved celebrations and export preferences.
-          </Text>
-        </View>
-        <View style={styles.signedOutContainer}>
-          <View style={styles.signedOutCard}>
-            <FloralSprig size={44} style={{ marginBottom: 12 }} />
-            <Text style={styles.signedOutTitle}>Sign in to CherryQube</Text>
-            <Text style={styles.signedOutCopy}>
-              Sign in to manage your export credits, personalized creations, and
-              account settings.
+        <ScrollView contentContainerStyle={styles.signedOutScrollContent}>
+          <View style={styles.header}>
+            <FloralSprig size={42} />
+            <Text style={styles.title}>Your account</Text>
+            <Text style={styles.headerCopy}>
+              Your saved celebrations and export preferences.
             </Text>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Sign in with your account"
-              onPress={() => router.push("/(modals)/sign-in")}
-              style={styles.primaryButton}
-            >
-              <Text style={styles.primaryButtonText}>Sign In</Text>
-            </Pressable>
           </View>
+          <View style={styles.signedOutContainer}>
+            <View style={styles.signedOutCard}>
+              <FloralSprig size={44} style={{ marginBottom: 12 }} />
+              <Text style={styles.signedOutTitle}>Sign in to CherryQube</Text>
+              <Text style={styles.signedOutCopy}>
+                Sign in to manage your export credits, personalized creations,
+                and account settings.
+              </Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Sign in with your account"
+                onPress={() => router.push("/(modals)/sign-in")}
+                style={styles.primaryButton}
+              >
+                <Text style={styles.primaryButtonText}>Sign In</Text>
+              </Pressable>
+            </View>
 
-          <View style={styles.linksCard}>
-            <Pressable
-              accessibilityRole="link"
-              accessibilityLabel="View Terms of Service"
-              onPress={() => openExternalUrl(`${WEB_ORIGIN}/terms`)}
-              style={styles.linkRow}
-            >
-              <Text style={styles.linkLabel}>Terms of Service</Text>
-              <Text style={styles.linkArrow}>↗</Text>
-            </Pressable>
+            <View style={styles.linksCard}>
+              <Pressable
+                accessibilityRole="link"
+                accessibilityLabel="View Terms of Service"
+                onPress={() => openExternalUrl(`${WEB_ORIGIN}/terms`)}
+                style={styles.linkRow}
+              >
+                <Text style={styles.linkLabel}>Terms of Service</Text>
+                <Text style={styles.linkArrow}>↗</Text>
+              </Pressable>
 
-            <View style={styles.linkDivider} />
+              <View style={styles.linkDivider} />
 
-            <Pressable
-              accessibilityRole="link"
-              accessibilityLabel="View Privacy Policy"
-              onPress={() => openExternalUrl(`${WEB_ORIGIN}/privacy`)}
-              style={styles.linkRow}
-            >
-              <Text style={styles.linkLabel}>Privacy Policy</Text>
-              <Text style={styles.linkArrow}>↗</Text>
-            </Pressable>
+              <Pressable
+                accessibilityRole="link"
+                accessibilityLabel="View Privacy Policy"
+                onPress={() => openExternalUrl(`${WEB_ORIGIN}/privacy`)}
+                style={styles.linkRow}
+              >
+                <Text style={styles.linkLabel}>Privacy Policy</Text>
+                <Text style={styles.linkArrow}>↗</Text>
+              </Pressable>
 
-            <View style={styles.linkDivider} />
+              <View style={styles.linkDivider} />
 
-            <Pressable
-              accessibilityRole="link"
-              accessibilityLabel="Contact Support"
-              onPress={() => openExternalUrl("mailto:support@cherryqube.com")}
-              style={styles.linkRow}
-            >
-              <Text style={styles.linkLabel}>Support</Text>
-              <Text style={styles.linkArrow}>↗</Text>
-            </Pressable>
+              <Pressable
+                accessibilityRole="link"
+                accessibilityLabel="Contact Support"
+                onPress={() => openExternalUrl("mailto:support@cherryqube.com")}
+                style={styles.linkRow}
+              >
+                <Text style={styles.linkLabel}>Support</Text>
+                <Text style={styles.linkArrow}>↗</Text>
+              </Pressable>
+            </View>
           </View>
-        </View>
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -417,8 +419,9 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: mobileTheme.colors.status.failedText,
   },
+  signedOutScrollContent: { flexGrow: 1 },
   signedOutContainer: {
-    flex: 1,
+    flexGrow: 1,
     padding: 20,
     justifyContent: "center",
     gap: 20,

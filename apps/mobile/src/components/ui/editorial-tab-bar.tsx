@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   AccountTabIcon,
   CreationsTabIcon,
@@ -21,8 +22,13 @@ export function EditorialTabBar({
   state,
   navigateToTab,
 }: EditorialTabBarProps) {
+  const { bottom } = useSafeAreaInsets();
+
   return (
-    <View style={styles.bar} accessibilityRole="tablist">
+    <View
+      style={[styles.bar, { paddingBottom: bottom }]}
+      accessibilityRole="tablist"
+    >
       {state.routes.map((route, index) => {
         const content = tabContent[route.name as keyof typeof tabContent];
         if (!content) return null;

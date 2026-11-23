@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
     paddingTop: 12,
   },
   closeText: {
-    color: mobileTheme.colors.quietInk,
+    color: mobileTheme.colors.ink,
     fontFamily: "Figtree_500Medium",
     fontSize: 14,
   },
@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   copy: {
-    color: mobileTheme.colors.quietInk,
+    color: mobileTheme.colors.ink,
     fontFamily: "Figtree_400Regular",
     fontSize: 16,
     lineHeight: 24,
@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   footnote: {
-    color: mobileTheme.colors.quietInk,
+    color: mobileTheme.colors.ink,
     fontFamily: "Figtree_400Regular",
     fontSize: 12,
     marginTop: 12,

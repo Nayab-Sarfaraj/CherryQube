@@ -65,7 +65,9 @@ export function HomeScreen() {
           </>
         }
         ListEmptyComponent={
-          <Text style={styles.empty}>No designs match those selections.</Text>
+          templates.length === 0 ? (
+            <Text style={styles.empty}>No designs match those selections.</Text>
+          ) : undefined
         }
         renderItem={({ item }) => <TemplateTile template={item} />}
       />
