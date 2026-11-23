@@ -1,7 +1,7 @@
 import { useOAuth } from "@clerk/expo";
 import { useSignIn, useSignUp } from "@clerk/expo/legacy";
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -19,6 +19,11 @@ import { FloralSprig } from "@/components/ui/floral-sprig";
 import { useMobileAuth } from "@/hooks/use-mobile-auth";
 import { CLERK_PUBLISHABLE_KEY } from "@/lib/mobile-config";
 import { mobileTheme } from "@/theme/theme";
+import {
+  evaluateOAuthResult,
+  evaluateSignInResult,
+  evaluateSignUpResult,
+} from "./sign-in-rules";
 
 function GoogleIcon({ size = 20 }: { size?: number }) {
   return (
@@ -46,7 +51,7 @@ function GoogleIcon({ size = 20 }: { size?: number }) {
 function getErrorMessage(err: unknown, defaultMsg: string): string {
   if (typeof err === "object" && err !== null && "errors" in err) {
     const clerkErr = err as {
-      errors?: Array<{ message?: string; longMessage?: string }>;
+      errors?: { message?: string; longMessage?: string }[];
     };
     if (clerkErr.errors && clerkErr.errors.length > 0) {
       return (
@@ -60,7 +65,44 @@ function getErrorMessage(err: unknown, defaultMsg: string): string {
   return defaultMsg;
 }
 
-export default function SignInModal() {
+function NoClerkKeyFallback({ onDismiss }: { onDismiss: () => void }) {
+  return (
+    <SafeAreaView edges={["top", "bottom"]} style={styles.screen}>
+      <View style={styles.mist} />
+      <View style={styles.topBar}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Close sign in"
+          onPress={onDismiss}
+          style={({ pressed }) => [
+            styles.closePill,
+            pressed && styles.closePillPressed,
+          ]}
+        >
+          <Text style={styles.closeText}>Close</Text>
+        </Pressable>
+      </View>
+      <View style={styles.centerWrap}>
+        <View style={[styles.card, mobileTheme.shadows.cardElevated]}>
+          <FloralSprig
+            size={44}
+            color={mobileTheme.colors.accent}
+            accentColor={mobileTheme.colors.palette.marigold}
+          />
+          <Text style={styles.brandTitle}>CHERRYQUBE</Text>
+          <Text style={styles.brandTagline}>Handmade holiday celebrations</Text>
+          <Text style={styles.title}>Keep your celebrations close</Text>
+          <Text style={styles.copy}>
+            Authentication keys are not configured in this environment. Set
+            EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY to enable sign-in.
+          </Text>
+        </View>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+function ClerkSignInContent({ onDismiss }: { onDismiss: () => void }) {
   const { isSignedIn } = useMobileAuth();
   const {
     signIn,
@@ -83,9 +125,9 @@ export default function SignInModal() {
 
   useEffect(() => {
     if (isSignedIn) {
-      router.back();
+      onDismiss();
     }
-  }, [isSignedIn]);
+  }, [isSignedIn, onDismiss]);
 
   const onSendEmail = async () => {
     const trimmed = email.trim();
@@ -120,7 +162,7 @@ export default function SignInModal() {
       }
     } catch (err: unknown) {
       const clerkErr = err as {
-        errors?: Array<{ code?: string; message?: string }>;
+        errors?: { code?: string; message?: string }[];
       };
       const errCode = clerkErr?.errors?.[0]?.code;
       if (errCode === "form_identifier_not_found") {
@@ -160,11 +202,15 @@ export default function SignInModal() {
         const result = await signUp.attemptEmailAddressVerification({
           code: cleanCode,
         });
-        if (result.status === "complete" && result.createdSessionId) {
-          await setSignUpActive({ session: result.createdSessionId });
-          router.back();
+        const outcome = evaluateSignUpResult(result);
+        if (outcome.success && outcome.sessionId) {
+          await setSignUpActive({ session: outcome.sessionId });
+          onDismiss();
         } else {
-          setError("Verification was not completed. Please try again.");
+          setError(
+            outcome.error ||
+              "Verification was not completed. Please check your code and try again.",
+          );
         }
       } else {
         if (!signIn || !setSignInActive) return;
@@ -172,11 +218,15 @@ export default function SignInModal() {
           strategy: "email_code",
           code: cleanCode,
         });
-        if (result.status === "complete" && result.createdSessionId) {
-          await setSignInActive({ session: result.createdSessionId });
-          router.back();
+        const outcome = evaluateSignInResult(result);
+        if (outcome.success && outcome.sessionId) {
+          await setSignInActive({ session: outcome.sessionId });
+          onDismiss();
         } else {
-          setError("Verification was not completed. Please try again.");
+          setError(
+            outcome.error ||
+              "Verification was not completed. Please check your code and try again.",
+          );
         }
       }
     } catch (err) {
@@ -196,9 +246,15 @@ export default function SignInModal() {
       setIsLoading(true);
       setError(null);
       const result = await startOAuthFlow();
-      if (result.createdSessionId && result.setActive) {
-        await result.setActive({ session: result.createdSessionId });
-        router.back();
+      const outcome = evaluateOAuthResult(result);
+      if (outcome.success && outcome.sessionId && result.setActive) {
+        await result.setActive({ session: outcome.sessionId });
+        onDismiss();
+      } else {
+        setError(
+          outcome.error ||
+            "Google sign-in could not be completed. Please try again.",
+        );
       }
     } catch (err) {
       setError(getErrorMessage(err, "Could not complete Google sign-in."));
@@ -207,45 +263,6 @@ export default function SignInModal() {
     }
   };
 
-  if (!CLERK_PUBLISHABLE_KEY) {
-    return (
-      <SafeAreaView edges={["top", "bottom"]} style={styles.screen}>
-        <View style={styles.mist} />
-        <View style={styles.topBar}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Close sign in"
-            onPress={() => router.back()}
-            style={({ pressed }) => [
-              styles.closePill,
-              pressed && styles.closePillPressed,
-            ]}
-          >
-            <Text style={styles.closeText}>Close</Text>
-          </Pressable>
-        </View>
-        <View style={styles.centerWrap}>
-          <View style={[styles.card, mobileTheme.shadows.cardElevated]}>
-            <FloralSprig
-              size={44}
-              color={mobileTheme.colors.accent}
-              accentColor={mobileTheme.colors.palette.marigold}
-            />
-            <Text style={styles.brandTitle}>CHERRYQUBE</Text>
-            <Text style={styles.brandTagline}>
-              Handmade holiday celebrations
-            </Text>
-            <Text style={styles.title}>Keep your celebrations close</Text>
-            <Text style={styles.copy}>
-              Authentication keys are not configured in this environment. Set
-              EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY to enable sign-in.
-            </Text>
-          </View>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   return (
     <SafeAreaView edges={["top", "bottom"]} style={styles.screen}>
       <View style={styles.mist} />
@@ -253,10 +270,12 @@ export default function SignInModal() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Close sign in"
-          onPress={() => router.back()}
+          disabled={isLoading}
+          onPress={onDismiss}
           style={({ pressed }) => [
             styles.closePill,
             pressed && styles.closePillPressed,
+            isLoading && styles.buttonDisabled,
           ]}
         >
           <Text style={styles.closeText}>Close</Text>
@@ -432,6 +451,21 @@ export default function SignInModal() {
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
+}
+
+export default function SignInModal() {
+  const hasDismissedRef = useRef(false);
+  const dismissModal = useCallback(() => {
+    if (hasDismissedRef.current) return;
+    hasDismissedRef.current = true;
+    router.back();
+  }, []);
+
+  if (!CLERK_PUBLISHABLE_KEY) {
+    return <NoClerkKeyFallback onDismiss={dismissModal} />;
+  }
+
+  return <ClerkSignInContent onDismiss={dismissModal} />;
 }
 
 const styles = StyleSheet.create({

@@ -6,19 +6,18 @@ import {
   HomeTabIcon,
 } from "@/components/ui/tab-icons";
 import { mobileTheme } from "@/theme/theme";
-
-const tabContent = {
-  index: { label: "Create", Icon: HomeTabIcon },
-  creations: { label: "Library", Icon: CreationsTabIcon },
-  account: { label: "Account", Icon: AccountTabIcon },
-} as const;
-
 import {
   triggerTabPress,
   type TabBarNavigation,
 } from "./editorial-tab-bar-rules";
 
 export type { TabBarNavigation };
+
+const tabContent = {
+  index: { label: "Create", Icon: HomeTabIcon },
+  creations: { label: "Library", Icon: CreationsTabIcon },
+  account: { label: "Account", Icon: AccountTabIcon },
+} as const;
 
 export type EditorialTabBarProps = {
   state: { index: number; routes: { key: string; name: string }[] };

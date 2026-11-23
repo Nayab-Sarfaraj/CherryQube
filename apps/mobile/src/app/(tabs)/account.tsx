@@ -114,24 +114,6 @@ function SparkleStar({
   );
 }
 
-const seasonalThemes = [
-  {
-    name: "Thanksgiving Harvest",
-    season: "Autumn Celebrations",
-    dots: ["#5E1F26", "#E3A72F", "#6E7B3A"],
-  },
-  {
-    name: "Christmas Evergreen",
-    season: "Winter & Holidays",
-    dots: ["#8E1B2E", "#1F4B3A", "#C9A24A"],
-  },
-  {
-    name: "New Year's Midnight",
-    season: "Champagne & Fireworks",
-    dots: ["#0E2A2D", "#E7D3A1", "#C98B78"],
-  },
-];
-
 export default function AccountTab() {
   const { isSignedIn, signOut } = useMobileAuth();
   const { user } = useMobileUser();
