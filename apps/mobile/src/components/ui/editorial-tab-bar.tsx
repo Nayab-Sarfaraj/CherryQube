@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   AccountTabIcon,
@@ -22,11 +22,11 @@ export function EditorialTabBar({
   state,
   navigateToTab,
 }: EditorialTabBarProps) {
-  const insets = useSafeAreaInsets();
+  const { bottom } = useSafeAreaInsets();
 
   return (
     <View
-      style={[styles.bar, { paddingBottom: Math.max(insets.bottom, 12) }]}
+      style={[styles.bar, { paddingBottom: bottom }]}
       accessibilityRole="tablist"
     >
       {state.routes.map((route, index) => {
@@ -43,18 +43,18 @@ export function EditorialTabBar({
             accessibilityState={{ selected: focused }}
             accessibilityLabel={content.label}
             onPress={onPress}
-            style={({ pressed }) => [
-              styles.item,
-              pressed && styles.itemPressed,
-            ]}
+            style={styles.item}
           >
             <Icon
               color={
                 focused ? mobileTheme.colors.ink : mobileTheme.colors.quietInk
               }
-              focused={focused}
-              size={26}
+              size={20}
             />
+            <Text style={[styles.label, focused && styles.labelActive]}>
+              {content.label}
+            </Text>
+            <View style={[styles.marker, focused && styles.markerActive]} />
           </Pressable>
         );
       })}
@@ -64,22 +64,31 @@ export function EditorialTabBar({
 
 const styles = StyleSheet.create({
   bar: {
-    alignItems: "center",
+    alignItems: "flex-start",
     backgroundColor: mobileTheme.colors.canvas,
+    borderTopColor: mobileTheme.colors.hairline,
+    borderTopWidth: StyleSheet.hairlineWidth,
     flexDirection: "row",
-    justifyContent: "space-around",
-    paddingHorizontal: 32,
-    paddingTop: 12,
+    minHeight: 68,
+    paddingHorizontal: 20,
+    paddingTop: 10,
   },
-  item: {
-    alignItems: "center",
-    flex: 1,
-    justifyContent: "center",
-    minHeight: 48,
-    minWidth: 48,
+  item: { alignItems: "center", flex: 1, gap: 3, minHeight: 52 },
+  label: {
+    color: mobileTheme.colors.quietInk,
+    fontFamily: "Figtree_500Medium",
+    fontSize: 11,
   },
-  itemPressed: {
-    opacity: 0.7,
-    transform: [{ scale: 0.94 }],
+  labelActive: {
+    color: mobileTheme.colors.ink,
+    fontFamily: "Figtree_600SemiBold",
   },
+  marker: {
+    backgroundColor: "transparent",
+    borderRadius: 99,
+    height: 2,
+    marginTop: 1,
+    width: 16,
+  },
+  markerActive: { backgroundColor: mobileTheme.colors.accent },
 });

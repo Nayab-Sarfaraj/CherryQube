@@ -20,8 +20,6 @@ import {
   useEntitlements,
 } from "@/features/account";
 import { FloralSprig } from "@/components/ui/floral-sprig";
-import { PillBadge } from "@/components/ui/pill-badge";
-import { PrimaryButton } from "@/components/ui/primary-button";
 import { useMobileAuth } from "@/hooks/use-mobile-auth";
 import { useMobileUser } from "@/hooks/use-mobile-user";
 import { WEB_ORIGIN } from "@/lib/mobile-config";
@@ -44,8 +42,6 @@ export default function AccountTab() {
     user?.primaryEmailAddress?.emailAddress ??
     user?.emailAddresses?.[0]?.emailAddress ??
     "";
-
-  const userInitial = email ? email.charAt(0).toUpperCase() : "C";
 
   const handleSignOutPress = () => {
     Alert.alert(
@@ -70,6 +66,7 @@ export default function AccountTab() {
   };
 
   const handleDeleteAccountPress = () => {
+    // Step 1: Initial warning
     Alert.alert(
       "Delete Account?",
       "Are you sure you want to delete your account? This will permanently remove your account and all associated data.",
@@ -85,6 +82,7 @@ export default function AccountTab() {
   };
 
   const showSecondDeleteConfirmation = () => {
+    // Step 2: Detailed second confirmation listing all purged items
     Alert.alert(
       "Confirm Permanent Deletion",
       "This action cannot be undone. It will immediately and permanently delete:\n\n" +
@@ -140,97 +138,94 @@ export default function AccountTab() {
   if (!isSignedIn) {
     return (
       <SafeAreaView edges={["top"]} style={styles.safe}>
-        <View style={styles.headerAmbient}>
-          <View style={styles.ambientHalo} />
-          <FloralSprig size={38} />
-          <Text style={styles.title}>Your Account</Text>
-          <Text style={styles.headerCopy}>
-            Your saved celebrations and export preferences.
-          </Text>
-        </View>
-
-        <View style={styles.signedOutContainer}>
-          <View
-            style={[styles.signedOutCard, mobileTheme.shadows.cardElevated]}
-          >
-            <FloralSprig size={40} style={{ marginBottom: 12 }} />
-            <Text style={styles.signedOutTitle}>Sign in to CherryQube</Text>
-            <Text style={styles.signedOutCopy}>
-              Sign in to manage your export credits, personalized creations, and
-              account settings.
+        <ScrollView contentContainerStyle={styles.signedOutScrollContent}>
+          <View style={styles.header}>
+            <FloralSprig size={42} />
+            <Text style={styles.title}>Your account</Text>
+            <Text style={styles.headerCopy}>
+              Your saved celebrations and export preferences.
             </Text>
-            <PrimaryButton
-              label="Sign In"
-              size="lg"
-              variant="primary"
-              style={{ width: "100%", marginTop: 8 }}
-              onPress={() => router.push("/(modals)/sign-in")}
-            />
           </View>
+          <View style={styles.signedOutContainer}>
+            <View style={styles.signedOutCard}>
+              <FloralSprig size={44} style={{ marginBottom: 12 }} />
+              <Text style={styles.signedOutTitle}>Sign in to CherryQube</Text>
+              <Text style={styles.signedOutCopy}>
+                Sign in to manage your export credits, personalized creations,
+                and account settings.
+              </Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Sign in with your account"
+                onPress={() => router.push("/(modals)/sign-in")}
+                style={styles.primaryButton}
+              >
+                <Text style={styles.primaryButtonText}>Sign In</Text>
+              </Pressable>
+            </View>
 
-          <View style={[styles.linksCard, mobileTheme.shadows.card]}>
-            <Pressable
-              accessibilityRole="link"
-              accessibilityLabel="View Terms of Service"
-              onPress={() => openExternalUrl(`${WEB_ORIGIN}/terms`)}
-              style={styles.linkRow}
-            >
-              <Text style={styles.linkLabel}>Terms of Service</Text>
-              <Text style={styles.linkArrow}>↗</Text>
-            </Pressable>
+            <View style={styles.linksCard}>
+              <Pressable
+                accessibilityRole="link"
+                accessibilityLabel="View Terms of Service"
+                onPress={() => openExternalUrl(`${WEB_ORIGIN}/terms`)}
+                style={styles.linkRow}
+              >
+                <Text style={styles.linkLabel}>Terms of Service</Text>
+                <Text style={styles.linkArrow}>↗</Text>
+              </Pressable>
 
-            <View style={styles.linkDivider} />
+              <View style={styles.linkDivider} />
 
-            <Pressable
-              accessibilityRole="link"
-              accessibilityLabel="View Privacy Policy"
-              onPress={() => openExternalUrl(`${WEB_ORIGIN}/privacy`)}
-              style={styles.linkRow}
-            >
-              <Text style={styles.linkLabel}>Privacy Policy</Text>
-              <Text style={styles.linkArrow}>↗</Text>
-            </Pressable>
+              <Pressable
+                accessibilityRole="link"
+                accessibilityLabel="View Privacy Policy"
+                onPress={() => openExternalUrl(`${WEB_ORIGIN}/privacy`)}
+                style={styles.linkRow}
+              >
+                <Text style={styles.linkLabel}>Privacy Policy</Text>
+                <Text style={styles.linkArrow}>↗</Text>
+              </Pressable>
 
-            <View style={styles.linkDivider} />
+              <View style={styles.linkDivider} />
 
-            <Pressable
-              accessibilityRole="link"
-              accessibilityLabel="Contact Support"
-              onPress={() => openExternalUrl("mailto:support@cherryqube.com")}
-              style={styles.linkRow}
-            >
-              <Text style={styles.linkLabel}>Support</Text>
-              <Text style={styles.linkArrow}>↗</Text>
-            </Pressable>
+              <Pressable
+                accessibilityRole="link"
+                accessibilityLabel="Contact Support"
+                onPress={() => openExternalUrl("mailto:support@cherryqube.com")}
+                style={styles.linkRow}
+              >
+                <Text style={styles.linkLabel}>Support</Text>
+                <Text style={styles.linkArrow}>↗</Text>
+              </Pressable>
+            </View>
           </View>
-        </View>
+        </ScrollView>
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView edges={["top"]} style={styles.safe}>
-      <View style={styles.headerAmbient}>
-        <View style={styles.ambientHalo} />
-        <View style={styles.avatarRing}>
-          <View style={styles.avatarInner}>
-            <Text style={styles.avatarText}>{userInitial}</Text>
-          </View>
-        </View>
-        <Text style={styles.profileEmail} numberOfLines={1}>
-          {email || "Signed-in creator"}
+      <View style={styles.header}>
+        <FloralSprig size={42} />
+        <Text style={styles.title}>Your account</Text>
+        <Text style={styles.headerCopy}>
+          Everything connected to your celebrations.
         </Text>
-        <PillBadge
-          label="Studio Member"
-          variant="accent"
-          size="sm"
-          style={{ marginTop: 6 }}
-        />
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Profile Card */}
+        <View style={styles.card}>
+          <Text style={styles.cardSectionTitle}>Signed in as</Text>
+          <Text style={styles.emailText} numberOfLines={1}>
+            {email || "Signed-in user"}
+          </Text>
+        </View>
+
         {/* Entitlements Card */}
-        <View style={[styles.card, mobileTheme.shadows.card]}>
+        <View style={styles.card}>
           <Text style={styles.cardSectionTitle}>Export Credits</Text>
           <View style={styles.creditsRow}>
             {isEntitlementsLoading ? (
@@ -251,7 +246,7 @@ export default function AccountTab() {
         </View>
 
         {/* Legal & Support Card */}
-        <View style={[styles.card, mobileTheme.shadows.card]}>
+        <View style={styles.card}>
           <Text style={styles.cardSectionTitle}>Information & Legal</Text>
 
           <Pressable
@@ -290,16 +285,20 @@ export default function AccountTab() {
         </View>
 
         {/* Actions Card */}
-        <View style={[styles.card, mobileTheme.shadows.card]}>
-          <PrimaryButton
-            label={isSigningOut ? "Signing out…" : "Sign Out"}
-            size="md"
-            variant="secondary"
-            loading={isSigningOut}
-            disabled={isSigningOut || isDeleting}
+        <View style={styles.card}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Sign out of account"
             onPress={handleSignOutPress}
-            style={{ width: "100%" }}
-          />
+            disabled={isSigningOut || isDeleting}
+            style={styles.signOutButton}
+          >
+            <Text style={styles.signOutButtonText}>
+              {isSigningOut ? "Signing out..." : "Sign Out"}
+            </Text>
+          </Pressable>
+
+          <View style={styles.linkDivider} />
 
           <Pressable
             accessibilityRole="button"
@@ -309,7 +308,7 @@ export default function AccountTab() {
             style={styles.deleteButton}
           >
             <Text style={styles.deleteButtonText}>
-              {isDeleting ? "Deleting account…" : "Delete Account"}
+              {isDeleting ? "Deleting account..." : "Delete Account"}
             </Text>
           </Pressable>
         </View>
@@ -320,172 +319,150 @@ export default function AccountTab() {
 
 const styles = StyleSheet.create({
   safe: {
-    backgroundColor: mobileTheme.colors.canvas,
     flex: 1,
+    backgroundColor: mobileTheme.colors.background,
   },
-  headerAmbient: {
-    alignItems: "center",
-    backgroundColor: mobileTheme.colors.surfaceMuted,
-    overflow: "hidden",
-    paddingBottom: 24,
+  header: {
+    backgroundColor: mobileTheme.colors.palette.marigold + "2B",
     paddingHorizontal: 20,
-    paddingTop: 16,
-    position: "relative",
-  },
-  ambientHalo: {
-    backgroundColor: mobileTheme.colors.palette.marigold + "22",
-    borderRadius: 999,
-    height: 220,
-    position: "absolute",
-    right: -40,
-    top: -60,
-    width: 220,
-  },
-  avatarRing: {
-    alignItems: "center",
-    backgroundColor: mobileTheme.colors.surface,
-    borderColor: mobileTheme.colors.accentGold + "66",
-    borderRadius: mobileTheme.radius.pill,
-    borderWidth: 2,
-    height: 72,
-    justifyContent: "center",
-    marginBottom: 10,
-    width: 72,
-  },
-  avatarInner: {
-    alignItems: "center",
-    backgroundColor: mobileTheme.colors.surfaceMuted,
-    borderRadius: mobileTheme.radius.pill,
-    height: 60,
-    justifyContent: "center",
-    width: 60,
-  },
-  avatarText: {
-    color: mobileTheme.colors.ink,
-    fontFamily: "Fraunces_600SemiBold",
-    fontSize: 24,
-  },
-  profileEmail: {
-    color: mobileTheme.colors.ink,
-    fontFamily: "Fraunces_600SemiBold",
-    fontSize: 20,
-    textAlign: "center",
+    paddingVertical: 26,
   },
   title: {
     color: mobileTheme.colors.ink,
     fontFamily: "Fraunces_600SemiBold",
-    fontSize: 26,
-    marginTop: 10,
+    fontSize: 30,
+    marginTop: 16,
   },
   headerCopy: {
-    color: mobileTheme.colors.quietInk,
+    color: mobileTheme.colors.muted,
     fontFamily: "Figtree_400Regular",
     fontSize: 14,
     lineHeight: 20,
     marginTop: 4,
-    textAlign: "center",
   },
   scrollContent: {
-    gap: 14,
     padding: 16,
     paddingBottom: 40,
+    gap: 16,
   },
   card: {
-    backgroundColor: mobileTheme.colors.surface,
-    borderColor: mobileTheme.colors.hairline,
-    borderRadius: mobileTheme.radius.card,
-    borderWidth: 1,
-    padding: 18,
+    borderBottomColor: mobileTheme.colors.hairline,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingBottom: 20,
   },
   cardSectionTitle: {
-    color: mobileTheme.colors.quietInk,
     fontFamily: "Figtree_600SemiBold",
-    fontSize: 13,
+    fontSize: 14,
+    color: mobileTheme.colors.muted,
     marginBottom: 8,
   },
+  emailText: {
+    fontFamily: "Figtree_600SemiBold",
+    fontSize: 18,
+    color: mobileTheme.colors.ink,
+  },
   creditsRow: {
-    alignItems: "center",
     flexDirection: "row",
-    marginBottom: 6,
+    alignItems: "center",
+    marginBottom: 8,
   },
   creditsCount: {
-    color: mobileTheme.colors.accent,
     fontFamily: "Fraunces_600SemiBold",
     fontSize: 22,
+    color: mobileTheme.colors.accent,
   },
   creditsDescription: {
-    color: mobileTheme.colors.quietInk,
     fontFamily: "Figtree_400Regular",
     fontSize: 13,
     lineHeight: 18,
+    color: mobileTheme.colors.muted,
   },
   linkRow: {
-    alignItems: "center",
+    minHeight: 48,
     flexDirection: "row",
+    alignItems: "center",
     justifyContent: "space-between",
-    minHeight: 44,
-    paddingVertical: 2,
+    paddingVertical: 4,
   },
   linkLabel: {
-    color: mobileTheme.colors.ink,
-    fontFamily: "Figtree_500Medium",
+    fontFamily: "Figtree_600SemiBold",
     fontSize: 15,
+    color: mobileTheme.colors.ink,
   },
   linkArrow: {
-    color: mobileTheme.colors.quietInk,
     fontFamily: "Figtree_600SemiBold",
     fontSize: 16,
+    color: mobileTheme.colors.muted,
   },
   linkDivider: {
-    backgroundColor: mobileTheme.colors.hairline,
-    height: 1,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: mobileTheme.colors.border + "33",
     marginVertical: 4,
   },
-  deleteButton: {
-    alignItems: "center",
+  signOutButton: {
+    minHeight: 48,
     justifyContent: "center",
-    marginTop: 10,
-    minHeight: 44,
+    alignItems: "center",
+  },
+  signOutButtonText: {
+    fontFamily: "Figtree_600SemiBold",
+    fontSize: 15,
+    color: mobileTheme.colors.ink,
+  },
+  deleteButton: {
+    minHeight: 48,
+    justifyContent: "center",
+    alignItems: "center",
   },
   deleteButtonText: {
-    color: mobileTheme.colors.status.failedText,
     fontFamily: "Figtree_600SemiBold",
-    fontSize: 14,
+    fontSize: 15,
+    color: mobileTheme.colors.status.failedText,
   },
+  signedOutScrollContent: { flexGrow: 1 },
   signedOutContainer: {
-    flex: 1,
-    gap: 16,
+    flexGrow: 1,
+    padding: 20,
     justifyContent: "center",
-    padding: 16,
+    gap: 20,
   },
   signedOutCard: {
+    backgroundColor: mobileTheme.colors.palette.marigold + "2B",
+    padding: 28,
     alignItems: "center",
-    backgroundColor: mobileTheme.colors.surface,
-    borderColor: mobileTheme.colors.hairline,
-    borderRadius: mobileTheme.radius.card,
-    borderWidth: 1,
-    padding: 24,
   },
   signedOutTitle: {
-    color: mobileTheme.colors.ink,
     fontFamily: "Fraunces_600SemiBold",
     fontSize: 22,
+    color: mobileTheme.colors.ink,
     marginBottom: 8,
     textAlign: "center",
   },
   signedOutCopy: {
-    color: mobileTheme.colors.quietInk,
     fontFamily: "Figtree_400Regular",
     fontSize: 14,
     lineHeight: 20,
-    marginBottom: 16,
+    color: mobileTheme.colors.muted,
     textAlign: "center",
+    marginBottom: 20,
+  },
+  primaryButton: {
+    minHeight: 48,
+    minWidth: 160,
+    backgroundColor: mobileTheme.colors.accent,
+    borderRadius: 24,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 24,
+  },
+  primaryButtonText: {
+    fontFamily: "Figtree_600SemiBold",
+    fontSize: 15,
+    color: mobileTheme.colors.surface,
   },
   linksCard: {
-    backgroundColor: mobileTheme.colors.surface,
-    borderColor: mobileTheme.colors.hairline,
-    borderRadius: mobileTheme.radius.card,
-    borderWidth: 1,
-    padding: 16,
+    borderTopColor: mobileTheme.colors.hairline,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingTop: 8,
   },
 });
