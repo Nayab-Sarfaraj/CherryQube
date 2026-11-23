@@ -23,7 +23,7 @@ import {
   evaluateOAuthResult,
   evaluateSignInResult,
   evaluateSignUpResult,
-} from "./sign-in-rules";
+} from "@/features/auth/sign-in-rules";
 
 function GoogleIcon({ size = 20 }: { size?: number }) {
   return (
