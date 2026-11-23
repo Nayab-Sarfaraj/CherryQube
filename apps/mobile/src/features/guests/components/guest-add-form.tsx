@@ -59,7 +59,7 @@ export function GuestAddForm({
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, mobileTheme.shadows.card]}>
       <Text style={styles.label}>Add a guest</Text>
       <View style={styles.inputRow}>
         <TextInput
@@ -70,7 +70,7 @@ export function GuestAddForm({
             if (error) setError(null);
           }}
           placeholder="e.g. Aunt Sarah"
-          placeholderTextColor={mobileTheme.colors.muted + "88"}
+          placeholderTextColor={mobileTheme.colors.quietInk + "88"}
           maxLength={MAX_GUEST_NAME_LENGTH}
           editable={!isAdding && !atCapacity}
           style={styles.input}
@@ -84,6 +84,7 @@ export function GuestAddForm({
           disabled={!isValidLength || isAdding || atCapacity}
           style={[
             styles.addButton,
+            mobileTheme.shadows.pill,
             (!isValidLength || isAdding || atCapacity) && styles.disabledButton,
           ]}
         >
@@ -114,66 +115,66 @@ export function GuestAddForm({
 const styles = StyleSheet.create({
   container: {
     backgroundColor: mobileTheme.colors.surface,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 16,
+    borderColor: mobileTheme.colors.hairline,
+    borderRadius: mobileTheme.radius.card,
     borderWidth: 1,
-    borderColor: mobileTheme.colors.border + "33",
+    marginBottom: 16,
+    padding: 16,
   },
   label: {
-    fontFamily: "Figtree_600SemiBold",
-    fontSize: 14,
     color: mobileTheme.colors.ink,
-    marginBottom: 8,
+    fontFamily: "Fraunces_600SemiBold",
+    fontSize: 16,
+    marginBottom: 10,
   },
   inputRow: {
+    alignItems: "center",
     flexDirection: "row",
     gap: 8,
-    alignItems: "center",
   },
   input: {
-    flex: 1,
-    minHeight: 48,
-    backgroundColor: mobileTheme.colors.background,
+    backgroundColor: mobileTheme.colors.surfaceMuted,
+    borderColor: mobileTheme.colors.hairline,
+    borderRadius: mobileTheme.radius.pill,
     borderWidth: 1,
-    borderColor: mobileTheme.colors.border + "55",
-    borderRadius: 8,
-    paddingHorizontal: 12,
+    color: mobileTheme.colors.ink,
+    flex: 1,
     fontFamily: "Figtree_400Regular",
     fontSize: 15,
-    color: mobileTheme.colors.ink,
+    minHeight: 46,
+    paddingHorizontal: 16,
   },
   addButton: {
-    minHeight: 48,
-    minWidth: 70,
-    backgroundColor: mobileTheme.colors.accent,
-    borderRadius: 8,
-    justifyContent: "center",
     alignItems: "center",
+    backgroundColor: mobileTheme.colors.accent,
+    borderRadius: mobileTheme.radius.pill,
+    justifyContent: "center",
+    minHeight: 46,
+    minWidth: 70,
     paddingHorizontal: 16,
   },
   disabledButton: {
     opacity: 0.5,
   },
   addButtonText: {
+    color: mobileTheme.colors.surface,
     fontFamily: "Figtree_600SemiBold",
     fontSize: 14,
-    color: mobileTheme.colors.surface,
   },
   footerRow: {
-    marginTop: 6,
     flexDirection: "row",
     justifyContent: "flex-end",
+    marginTop: 6,
   },
   counterText: {
+    color: mobileTheme.colors.quietInk,
     fontFamily: "Figtree_400Regular",
     fontSize: 12,
-    color: mobileTheme.colors.muted,
   },
   errorText: {
-    fontFamily: "Figtree_400Regular",
-    fontSize: 12,
     color: mobileTheme.colors.status.failedText,
     flex: 1,
+    fontFamily: "Figtree_400Regular",
+    fontSize: 12,
   },
 });

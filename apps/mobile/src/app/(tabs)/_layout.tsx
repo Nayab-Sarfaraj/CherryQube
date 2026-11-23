@@ -16,8 +16,8 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: "Home",
-          tabBarIcon: ({ color }) => (
-            <HomeTabIcon color={String(color)} size={22} />
+          tabBarIcon: ({ color, focused }) => (
+            <HomeTabIcon color={String(color)} focused={focused} size={22} />
           ),
         }}
       />
@@ -25,8 +25,12 @@ export default function TabsLayout() {
         name="creations"
         options={{
           title: "My creations",
-          tabBarIcon: ({ color }) => (
-            <CreationsTabIcon color={String(color)} size={22} />
+          tabBarIcon: ({ color, focused }) => (
+            <CreationsTabIcon
+              color={String(color)}
+              focused={focused}
+              size={22}
+            />
           ),
         }}
       />
@@ -34,8 +38,8 @@ export default function TabsLayout() {
         name="account"
         options={{
           title: "Account",
-          tabBarIcon: ({ color }) => (
-            <AccountTabIcon color={String(color)} size={22} />
+          tabBarIcon: ({ color, focused }) => (
+            <AccountTabIcon color={String(color)} focused={focused} size={22} />
           ),
         }}
       />

@@ -17,6 +17,9 @@ import {
   useRenderJob,
   useRetryRender,
 } from "@/features/creations/use-creations";
+import { FloralSprig } from "@/components/ui/floral-sprig";
+import { PillBadge, type PillBadgeVariant } from "@/components/ui/pill-badge";
+import { PrimaryButton } from "@/components/ui/primary-button";
 import { useScreenActivity } from "@/hooks/use-screen-activity";
 import { WEB_ORIGIN } from "@/lib/mobile-config";
 import { shareCreation } from "@/lib/native-share";
@@ -54,7 +57,6 @@ export default function CreationDetailRoute() {
 
   const retryRender = useRetryRender();
 
-  // Combine state: renderJob takes precedence if active, else creation.currentRender or creation.status
   const currentStatus = (
     renderJob?.status ||
     creation?.currentRender?.status ||
@@ -109,6 +111,19 @@ export default function CreationDetailRoute() {
   const typeLabel = creation?.type === "card" ? "Card" : "Invitation";
   const isInvitation = creation?.type === "invitation";
 
+  let statusVariant: PillBadgeVariant = "draft";
+  let statusText = "Draft";
+  if (currentStatus === "queued" || currentStatus === "rendering") {
+    statusVariant = "rendering";
+    statusText = "Rendering";
+  } else if (currentStatus === "ready") {
+    statusVariant = "ready";
+    statusText = "Ready";
+  } else if (currentStatus === "failed") {
+    statusVariant = "failed";
+    statusText = "Failed";
+  }
+
   if (isCreationLoading && !creation) {
     return (
       <SafeAreaView edges={["top", "bottom"]} style={styles.safe}>
@@ -124,28 +139,28 @@ export default function CreationDetailRoute() {
     return (
       <SafeAreaView edges={["top", "bottom"]} style={styles.safe}>
         <View style={styles.centerContainer}>
-          <Text style={styles.errorTitle}>Could not load creation</Text>
-          <Text style={styles.errorCopy}>
-            {creationError instanceof Error
-              ? creationError.message
-              : "Something went wrong loading this creation."}
-          </Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Retry loading creation"
-            onPress={() => void refetchCreation()}
-            style={styles.primaryButton}
-          >
-            <Text style={styles.primaryButtonText}>Retry</Text>
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Back to creations list"
-            onPress={() => router.back()}
-            style={styles.secondaryButton}
-          >
-            <Text style={styles.secondaryButtonText}>Back to creations</Text>
-          </Pressable>
+          <View style={[styles.errorCard, mobileTheme.shadows.cardElevated]}>
+            <Text style={styles.errorTitle}>Could not load creation</Text>
+            <Text style={styles.errorCopy}>
+              {creationError instanceof Error
+                ? creationError.message
+                : "Something went wrong loading this creation."}
+            </Text>
+            <PrimaryButton
+              label="Retry"
+              size="md"
+              variant="primary"
+              onPress={() => void refetchCreation()}
+              style={{ width: "100%", marginTop: 16 }}
+            />
+            <PrimaryButton
+              label="Back to creations"
+              size="md"
+              variant="outline"
+              onPress={() => router.back()}
+              style={{ width: "100%", marginTop: 8 }}
+            />
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -170,21 +185,22 @@ export default function CreationDetailRoute() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Creation metadata header */}
-        <View style={styles.metaCard}>
-          <Text style={styles.kicker}>
-            {themeName ? `${themeName} · ` : ""}
-            {typeLabel}
-          </Text>
+        {/* Creation metadata header card */}
+        <View style={[styles.metaCard, mobileTheme.shadows.card]}>
+          <View style={styles.metaTopRow}>
+            <PillBadge
+              label={themeName ? `${themeName} · ${typeLabel}` : typeLabel}
+              variant="accent"
+              size="sm"
+            />
+            <PillBadge label={statusText} variant={statusVariant} size="sm" />
+          </View>
           <Text style={styles.creationTitle}>{creation?.title}</Text>
-          <Text style={styles.metaSub}>
-            Status: <Text style={styles.statusBold}>{currentStatus}</Text>
-          </Text>
         </View>
 
         {/* 1. Rendering / Queued state */}
         {(currentStatus === "queued" || currentStatus === "rendering") && (
-          <View style={styles.stateCard}>
+          <View style={[styles.stateCard, mobileTheme.shadows.card]}>
             <ActivityIndicator
               size="large"
               color={mobileTheme.colors.accent}
@@ -200,7 +216,7 @@ export default function CreationDetailRoute() {
 
         {/* 2. Ready state */}
         {currentStatus === "ready" && (
-          <View style={styles.stateCard}>
+          <View style={[styles.stateCard, mobileTheme.shadows.cardElevated]}>
             {videoUrl ? (
               <View style={styles.videoWrapper}>
                 <VideoView
@@ -212,6 +228,7 @@ export default function CreationDetailRoute() {
               </View>
             ) : (
               <View style={styles.placeholderBox}>
+                <FloralSprig size={32} />
                 <Text style={styles.placeholderText}>
                   Your video is ready to view and share.
                 </Text>
@@ -219,32 +236,21 @@ export default function CreationDetailRoute() {
             )}
 
             <View style={styles.actionButtonGroup}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Share video and link"
+              <PrimaryButton
+                label={isSharing ? "Preparing share…" : "Share video"}
+                size="md"
+                variant="primary"
+                loading={isSharing}
                 onPress={() => void handleShare()}
-                disabled={isSharing}
-                style={[
-                  styles.primaryButton,
-                  isSharing && styles.buttonDisabled,
-                ]}
-              >
-                <Text style={styles.primaryButtonText}>
-                  {isSharing ? "Preparing share…" : "Share video"}
-                </Text>
-              </Pressable>
+              />
 
               {publicUrl && (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Copy public invitation link"
+                <PrimaryButton
+                  label={copied ? "Link copied!" : "Copy public link"}
+                  size="md"
+                  variant="secondary"
                   onPress={() => void handleCopyLink()}
-                  style={styles.secondaryButton}
-                >
-                  <Text style={styles.secondaryButtonText}>
-                    {copied ? "Link copied!" : "Copy public link"}
-                  </Text>
-                </Pressable>
+                />
               )}
             </View>
 
@@ -252,27 +258,23 @@ export default function CreationDetailRoute() {
             {isInvitation && (
               <View style={styles.guestsEntryCard}>
                 <View style={styles.guestsEntryInfo}>
-                  <Text style={styles.guestsEntryTitle}>Guest List</Text>
+                  <Text style={styles.guestsEntryTitle}>Guest Links</Text>
                   <Text style={styles.guestsEntryCopy}>
                     {creation?.guestCount ?? 0} guest
                     {(creation?.guestCount ?? 0) === 1 ? "" : "s"} added
                   </Text>
                 </View>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Manage guests"
+                <PrimaryButton
+                  label="Manage guests →"
+                  size="sm"
+                  variant="outline"
                   onPress={() =>
                     router.push({
                       pathname: "/creation/[id]/guests",
                       params: { id: creation.id },
                     })
                   }
-                  style={styles.manageGuestsButton}
-                >
-                  <Text style={styles.manageGuestsButtonText}>
-                    Manage guests →
-                  </Text>
-                </Pressable>
+                />
               </View>
             )}
           </View>
@@ -280,7 +282,13 @@ export default function CreationDetailRoute() {
 
         {/* 3. Failed state */}
         {currentStatus === "failed" && (
-          <View style={[styles.stateCard, styles.failedBorder]}>
+          <View
+            style={[
+              styles.stateCard,
+              styles.failedBorder,
+              mobileTheme.shadows.card,
+            ]}
+          >
             <Text style={styles.errorTitle}>Render failed</Text>
             <Text style={styles.stateCopy}>
               {renderJob?.error ||
@@ -288,34 +296,31 @@ export default function CreationDetailRoute() {
                 "There was an error while rendering this video. You can retry the export without using an extra credit."}
             </Text>
 
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Retry rendering video"
-              disabled={retryRender.isPending}
+            <PrimaryButton
+              label={retryRender.isPending ? "Retrying…" : "Retry export"}
+              size="md"
+              variant="primary"
+              loading={retryRender.isPending}
               onPress={handleRetry}
-              style={[
-                styles.primaryButton,
-                retryRender.isPending && styles.buttonDisabled,
-              ]}
-            >
-              <Text style={styles.primaryButtonText}>
-                {retryRender.isPending ? "Retrying…" : "Retry export"}
-              </Text>
-            </Pressable>
+              style={{ width: "100%", marginTop: 8 }}
+            />
           </View>
         )}
 
         {/* 4. Draft state */}
         {currentStatus === "draft" && (
-          <View style={styles.stateCard}>
+          <View style={[styles.stateCard, mobileTheme.shadows.card]}>
+            <FloralSprig size={32} style={{ marginBottom: 10 }} />
             <Text style={styles.stateTitle}>Draft saved</Text>
             <Text style={styles.stateCopy}>
               This creation is currently saved as a draft. Open the editor to
               customize your message or export when ready.
             </Text>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Continue editing in editor"
+            <PrimaryButton
+              label="Continue editing"
+              size="md"
+              variant="primary"
+              style={{ width: "100%", marginTop: 8 }}
               onPress={() =>
                 router.push({
                   pathname: "/editor/[templateId]",
@@ -325,10 +330,7 @@ export default function CreationDetailRoute() {
                   },
                 })
               }
-              style={styles.primaryButton}
-            >
-              <Text style={styles.primaryButtonText}>Continue editing</Text>
-            </Pressable>
+            />
           </View>
         )}
       </ScrollView>
@@ -338,83 +340,80 @@ export default function CreationDetailRoute() {
 
 const styles = StyleSheet.create({
   safe: {
+    backgroundColor: mobileTheme.colors.canvas,
     flex: 1,
-    backgroundColor: mobileTheme.colors.background,
   },
   headerBar: {
-    flexDirection: "row",
     alignItems: "center",
+    backgroundColor: mobileTheme.colors.canvas,
+    flexDirection: "row",
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: mobileTheme.colors.border + "55",
-    backgroundColor: mobileTheme.colors.surface,
   },
   backButton: {
-    minHeight: 48,
-    minWidth: 48,
     justifyContent: "center",
+    minHeight: 44,
+    minWidth: 44,
   },
   backButtonText: {
-    color: mobileTheme.colors.accent,
+    color: mobileTheme.colors.ink,
     fontFamily: "Figtree_600SemiBold",
-    fontSize: 16,
+    fontSize: 15,
   },
   headerTitle: {
-    flex: 1,
-    textAlign: "center",
     color: mobileTheme.colors.ink,
+    flex: 1,
     fontFamily: "Fraunces_600SemiBold",
     fontSize: 17,
+    textAlign: "center",
   },
   headerSpacer: {
-    minWidth: 48,
+    minWidth: 44,
   },
   centerContainer: {
+    alignItems: "center",
     flex: 1,
     justifyContent: "center",
-    alignItems: "center",
     padding: 24,
   },
   scrollContent: {
-    padding: 20,
+    padding: 16,
     paddingBottom: 40,
   },
   metaCard: {
-    marginBottom: 24,
+    backgroundColor: mobileTheme.colors.surface,
+    borderColor: mobileTheme.colors.hairline,
+    borderRadius: mobileTheme.radius.card,
+    borderWidth: 1,
+    marginBottom: 16,
+    padding: 18,
   },
-  kicker: {
-    color: mobileTheme.colors.muted,
-    fontFamily: "Figtree_600SemiBold",
-    fontSize: 14,
-    marginBottom: 4,
+  metaTopRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 10,
   },
   creationTitle: {
     color: mobileTheme.colors.ink,
     fontFamily: "Fraunces_600SemiBold",
-    fontSize: 24,
-    lineHeight: 30,
-    marginBottom: 6,
-  },
-  metaSub: {
-    color: mobileTheme.colors.muted,
-    fontFamily: "Figtree_400Regular",
-    fontSize: 14,
-  },
-  statusBold: {
-    fontFamily: "Figtree_600SemiBold",
-    textTransform: "capitalize",
-    color: mobileTheme.colors.ink,
+    fontSize: 22,
+    lineHeight: 28,
   },
   stateCard: {
     alignItems: "center",
+    backgroundColor: mobileTheme.colors.surface,
+    borderColor: mobileTheme.colors.hairline,
+    borderRadius: mobileTheme.radius.card,
+    borderWidth: 1,
+    padding: 16,
   },
   failedBorder: {
-    borderColor: mobileTheme.colors.accent,
+    borderColor: mobileTheme.colors.status.failedText + "44",
   },
   spinner: {
-    marginVertical: 16,
+    marginVertical: 18,
   },
   stateTitle: {
     color: mobileTheme.colors.ink,
@@ -424,89 +423,57 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   stateCopy: {
-    color: mobileTheme.colors.ink,
+    color: mobileTheme.colors.quietInk,
     fontFamily: "Figtree_400Regular",
-    fontSize: 15,
-    lineHeight: 22,
-    textAlign: "center",
+    fontSize: 14,
+    lineHeight: 21,
     marginBottom: 16,
+    textAlign: "center",
   },
   videoWrapper: {
-    width: "100%",
     aspectRatio: 9 / 16,
-    maxHeight: 480,
-    borderRadius: 2,
-    overflow: "hidden",
     backgroundColor: mobileTheme.colors.videoBackdrop,
+    borderRadius: mobileTheme.radius.cardSmall,
     marginBottom: 16,
+    maxHeight: 460,
+    overflow: "hidden",
+    width: "100%",
   },
   videoPlayer: {
-    width: "100%",
     height: "100%",
+    width: "100%",
   },
   placeholderBox: {
-    width: "100%",
-    height: 180,
-    borderRadius: 12,
-    backgroundColor: mobileTheme.colors.border,
     alignItems: "center",
+    backgroundColor: mobileTheme.colors.surfaceMuted,
+    borderRadius: mobileTheme.radius.cardSmall,
+    gap: 8,
+    height: 180,
     justifyContent: "center",
     marginBottom: 16,
     padding: 16,
+    width: "100%",
   },
   placeholderText: {
-    color: mobileTheme.colors.muted,
+    color: mobileTheme.colors.quietInk,
     fontFamily: "Figtree_500Medium",
     fontSize: 14,
     textAlign: "center",
   },
   actionButtonGroup: {
+    gap: 10,
+    marginTop: 4,
     width: "100%",
-    gap: 12,
-    marginTop: 8,
-  },
-  primaryButton: {
-    backgroundColor: mobileTheme.colors.accent,
-    borderRadius: 999,
-    minHeight: 48,
-    paddingHorizontal: 24,
-    justifyContent: "center",
-    alignItems: "center",
-    width: "100%",
-  },
-  primaryButtonText: {
-    color: mobileTheme.colors.surface,
-    fontFamily: "Figtree_600SemiBold",
-    fontSize: 16,
-  },
-  secondaryButton: {
-    borderColor: mobileTheme.colors.border,
-    borderWidth: 1,
-    borderRadius: 999,
-    minHeight: 48,
-    paddingHorizontal: 24,
-    justifyContent: "center",
-    alignItems: "center",
-    width: "100%",
-    backgroundColor: mobileTheme.colors.background,
-  },
-  secondaryButtonText: {
-    color: mobileTheme.colors.ink,
-    fontFamily: "Figtree_600SemiBold",
-    fontSize: 15,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
   },
   guestsEntryCard: {
-    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    width: "100%",
     borderTopColor: mobileTheme.colors.hairline,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    marginTop: 20,
+    borderTopWidth: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 18,
     paddingTop: 16,
+    width: "100%",
   },
   guestsEntryInfo: {
     flex: 1,
@@ -517,42 +484,38 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   guestsEntryCopy: {
-    color: mobileTheme.colors.muted,
+    color: mobileTheme.colors.quietInk,
     fontFamily: "Figtree_400Regular",
     fontSize: 13,
     marginTop: 2,
   },
-  manageGuestsButton: {
-    minHeight: 48,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  manageGuestsButtonText: {
-    color: mobileTheme.colors.accent,
-    fontFamily: "Figtree_600SemiBold",
-    fontSize: 14,
-  },
   statusText: {
     color: mobileTheme.colors.ink,
     fontFamily: "Figtree_500Medium",
-    fontSize: 16,
+    fontSize: 15,
     marginTop: 12,
   },
+  errorCard: {
+    alignItems: "center",
+    backgroundColor: mobileTheme.colors.surface,
+    borderColor: mobileTheme.colors.hairline,
+    borderRadius: mobileTheme.radius.card,
+    borderWidth: 1,
+    padding: 24,
+    width: "100%",
+  },
   errorTitle: {
-    color: mobileTheme.colors.accent,
+    color: mobileTheme.colors.status.failedText,
     fontFamily: "Fraunces_600SemiBold",
     fontSize: 20,
     marginBottom: 8,
     textAlign: "center",
   },
   errorCopy: {
-    color: mobileTheme.colors.ink,
+    color: mobileTheme.colors.quietInk,
     fontFamily: "Figtree_400Regular",
     fontSize: 14,
     lineHeight: 20,
     textAlign: "center",
-    marginBottom: 16,
   },
 });

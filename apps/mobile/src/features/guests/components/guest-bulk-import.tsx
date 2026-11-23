@@ -59,7 +59,7 @@ export function GuestBulkImport({
         accessibilityRole="button"
         accessibilityLabel="Open paste multiple names"
         onPress={() => setIsOpen(true)}
-        style={styles.toggleButton}
+        style={[styles.toggleButton, mobileTheme.shadows.pill]}
       >
         <Text style={styles.toggleButtonText}>+ Paste multiple names</Text>
       </Pressable>
@@ -67,7 +67,7 @@ export function GuestBulkImport({
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, mobileTheme.shadows.card]}>
       <View style={styles.headerRow}>
         <Text style={styles.title}>Paste guest names</Text>
         <Pressable
@@ -97,7 +97,7 @@ export function GuestBulkImport({
           if (serverError) setServerError(null);
         }}
         placeholder={"Uncle Bob\nSarah Jenkins\nGrandma Rose"}
-        placeholderTextColor={mobileTheme.colors.muted + "88"}
+        placeholderTextColor={mobileTheme.colors.quietInk + "88"}
         multiline
         numberOfLines={4}
         textAlignVertical="top"
@@ -146,6 +146,7 @@ export function GuestBulkImport({
         disabled={validCount === 0 || exceedsCapacity || isImporting}
         style={[
           styles.submitButton,
+          mobileTheme.shadows.pill,
           (validCount === 0 || exceedsCapacity || isImporting) &&
             styles.disabledButton,
         ]}
@@ -164,116 +165,116 @@ export function GuestBulkImport({
 
 const styles = StyleSheet.create({
   toggleButton: {
-    minHeight: 48,
-    borderWidth: 1,
-    borderStyle: "dashed",
-    borderColor: mobileTheme.colors.border,
-    borderRadius: 8,
-    justifyContent: "center",
     alignItems: "center",
+    backgroundColor: mobileTheme.colors.surface,
+    borderColor: mobileTheme.colors.hairline,
+    borderRadius: mobileTheme.radius.pill,
+    borderWidth: 1,
+    justifyContent: "center",
     marginBottom: 16,
+    minHeight: 44,
     paddingHorizontal: 16,
   },
   toggleButtonText: {
+    color: mobileTheme.colors.accent,
     fontFamily: "Figtree_600SemiBold",
     fontSize: 14,
-    color: mobileTheme.colors.accent,
   },
   container: {
     backgroundColor: mobileTheme.colors.surface,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 16,
+    borderColor: mobileTheme.colors.hairline,
+    borderRadius: mobileTheme.radius.card,
     borderWidth: 1,
-    borderColor: mobileTheme.colors.border + "33",
+    marginBottom: 16,
+    padding: 16,
   },
   headerRow: {
+    alignItems: "center",
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
     marginBottom: 6,
   },
   title: {
-    fontFamily: "Figtree_600SemiBold",
-    fontSize: 15,
     color: mobileTheme.colors.ink,
+    fontFamily: "Fraunces_600SemiBold",
+    fontSize: 16,
   },
   closeButton: {
-    minHeight: 48,
-    minWidth: 48,
-    justifyContent: "center",
     alignItems: "center",
+    justifyContent: "center",
+    minHeight: 40,
+    minWidth: 40,
     padding: 4,
   },
   closeButtonText: {
+    color: mobileTheme.colors.quietInk,
     fontFamily: "Figtree_600SemiBold",
     fontSize: 13,
-    color: mobileTheme.colors.muted,
   },
   helpText: {
+    color: mobileTheme.colors.quietInk,
     fontFamily: "Figtree_400Regular",
     fontSize: 13,
-    color: mobileTheme.colors.muted,
-    marginBottom: 10,
     lineHeight: 18,
+    marginBottom: 10,
   },
   textArea: {
-    minHeight: 90,
-    backgroundColor: mobileTheme.colors.background,
+    backgroundColor: mobileTheme.colors.surfaceMuted,
+    borderColor: mobileTheme.colors.hairline,
+    borderRadius: mobileTheme.radius.cardSmall,
     borderWidth: 1,
-    borderColor: mobileTheme.colors.border + "55",
-    borderRadius: 8,
-    padding: 10,
+    color: mobileTheme.colors.ink,
     fontFamily: "Figtree_400Regular",
     fontSize: 14,
-    color: mobileTheme.colors.ink,
     marginBottom: 10,
+    minHeight: 90,
+    padding: 12,
   },
   previewBox: {
-    backgroundColor: mobileTheme.colors.background,
-    borderRadius: 6,
-    padding: 10,
+    backgroundColor: mobileTheme.colors.surfaceMuted,
+    borderRadius: 10,
     marginBottom: 10,
+    padding: 10,
   },
   previewSummary: {
+    color: mobileTheme.colors.ink,
     fontFamily: "Figtree_600SemiBold",
     fontSize: 13,
-    color: mobileTheme.colors.ink,
   },
   invalidList: {
     marginTop: 6,
   },
   invalidText: {
+    color: mobileTheme.colors.status.failedText,
     fontFamily: "Figtree_400Regular",
     fontSize: 12,
-    color: mobileTheme.colors.status.failedText,
     marginTop: 2,
   },
   capacityWarning: {
+    color: mobileTheme.colors.status.failedText,
     fontFamily: "Figtree_600SemiBold",
     fontSize: 12,
-    color: mobileTheme.colors.status.failedText,
     marginTop: 6,
   },
   errorText: {
+    color: mobileTheme.colors.status.failedText,
     fontFamily: "Figtree_400Regular",
     fontSize: 13,
-    color: mobileTheme.colors.status.failedText,
     marginBottom: 10,
   },
   submitButton: {
-    minHeight: 48,
-    backgroundColor: mobileTheme.colors.accent,
-    borderRadius: 8,
-    justifyContent: "center",
     alignItems: "center",
+    backgroundColor: mobileTheme.colors.accent,
+    borderRadius: mobileTheme.radius.pill,
+    justifyContent: "center",
+    minHeight: 46,
   },
   disabledButton: {
     opacity: 0.5,
   },
   submitButtonText: {
+    color: mobileTheme.colors.surface,
     fontFamily: "Figtree_600SemiBold",
     fontSize: 14,
-    color: mobileTheme.colors.surface,
   },
 });

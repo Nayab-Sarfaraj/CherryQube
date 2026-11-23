@@ -47,15 +47,23 @@ export function GuestRow({ guest, onDelete, isDeleting }: GuestRowProps) {
     );
   };
 
+  const initial = guest.name.trim().charAt(0).toUpperCase() || "G";
+
   return (
-    <View style={styles.card}>
-      <View style={styles.infoCol}>
-        <Text style={styles.name} numberOfLines={1}>
-          {guest.name}
-        </Text>
-        <Text style={styles.link} numberOfLines={1} ellipsizeMode="middle">
-          {guest.link}
-        </Text>
+    <View style={[styles.card, mobileTheme.shadows.card]}>
+      <View style={styles.topRow}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarInitial}>{initial}</Text>
+        </View>
+
+        <View style={styles.infoCol}>
+          <Text style={styles.name} numberOfLines={1}>
+            {guest.name}
+          </Text>
+          <Text style={styles.link} numberOfLines={1} ellipsizeMode="middle">
+            {guest.link}
+          </Text>
+        </View>
       </View>
 
       <View style={styles.actionsRow}>
@@ -63,11 +71,11 @@ export function GuestRow({ guest, onDelete, isDeleting }: GuestRowProps) {
           accessibilityRole="button"
           accessibilityLabel={`Copy link for ${guest.name}`}
           onPress={handleCopy}
-          style={styles.actionButton}
+          style={styles.pillButton}
           hitSlop={6}
         >
-          <Text style={styles.actionButtonText}>
-            {copied ? "Copied" : "Copy"}
+          <Text style={styles.pillButtonText}>
+            {copied ? "Copied!" : "Copy link"}
           </Text>
         </Pressable>
 
@@ -75,10 +83,10 @@ export function GuestRow({ guest, onDelete, isDeleting }: GuestRowProps) {
           accessibilityRole="button"
           accessibilityLabel={`Share link for ${guest.name}`}
           onPress={handleShare}
-          style={styles.actionButton}
+          style={styles.pillButton}
           hitSlop={6}
         >
-          <Text style={styles.actionButtonText}>Share</Text>
+          <Text style={styles.pillButtonText}>Share</Text>
         </Pressable>
 
         <Pressable
@@ -86,11 +94,11 @@ export function GuestRow({ guest, onDelete, isDeleting }: GuestRowProps) {
           accessibilityLabel={`Delete ${guest.name}`}
           onPress={handleDeletePress}
           disabled={isDeleting}
-          style={[styles.actionButton, styles.deleteButton]}
+          style={[styles.pillButton, styles.deleteButton]}
           hitSlop={6}
         >
-          <Text style={[styles.actionButtonText, styles.deleteButtonText]}>
-            {isDeleting ? "..." : "Delete"}
+          <Text style={[styles.pillButtonText, styles.deleteButtonText]}>
+            {isDeleting ? "…" : "Delete"}
           </Text>
         </Pressable>
       </View>
@@ -101,50 +109,67 @@ export function GuestRow({ guest, onDelete, isDeleting }: GuestRowProps) {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: mobileTheme.colors.surface,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 10,
+    borderColor: mobileTheme.colors.hairline,
+    borderRadius: mobileTheme.radius.cardSmall,
     borderWidth: 1,
-    borderColor: mobileTheme.colors.border + "33",
+    marginBottom: 10,
+    padding: 14,
+  },
+  topRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 12,
+  },
+  avatar: {
+    alignItems: "center",
+    backgroundColor: mobileTheme.colors.surfaceMuted,
+    borderRadius: mobileTheme.radius.pill,
+    height: 40,
+    justifyContent: "center",
+    width: 40,
+  },
+  avatarInitial: {
+    color: mobileTheme.colors.ink,
+    fontFamily: "Fraunces_600SemiBold",
+    fontSize: 16,
   },
   infoCol: {
-    marginBottom: 10,
+    flex: 1,
   },
   name: {
-    fontFamily: "Figtree_600SemiBold",
-    fontSize: 16,
     color: mobileTheme.colors.ink,
-    marginBottom: 4,
+    fontFamily: "Fraunces_600SemiBold",
+    fontSize: 16,
   },
   link: {
+    color: mobileTheme.colors.quietInk,
     fontFamily: "Figtree_400Regular",
-    fontSize: 13,
-    color: mobileTheme.colors.muted,
+    fontSize: 12,
+    marginTop: 2,
   },
   actionsRow: {
+    borderTopColor: mobileTheme.colors.hairline,
+    borderTopWidth: 1,
     flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "flex-end",
     gap: 8,
+    justifyContent: "flex-end",
+    marginTop: 12,
+    paddingTop: 10,
   },
-  actionButton: {
-    minHeight: 48,
-    minWidth: 64,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: mobileTheme.colors.border + "55",
-    backgroundColor: mobileTheme.colors.background,
-    justifyContent: "center",
+  pillButton: {
     alignItems: "center",
+    backgroundColor: mobileTheme.colors.surfaceMuted,
+    borderRadius: mobileTheme.radius.pill,
+    justifyContent: "center",
+    minHeight: 32,
+    paddingHorizontal: 12,
   },
-  actionButtonText: {
-    fontFamily: "Figtree_600SemiBold",
-    fontSize: 13,
+  pillButtonText: {
     color: mobileTheme.colors.ink,
+    fontFamily: "Figtree_600SemiBold",
+    fontSize: 12,
   },
   deleteButton: {
-    borderColor: mobileTheme.colors.status.failedBg,
     backgroundColor: mobileTheme.colors.status.failedBg,
   },
   deleteButtonText: {
