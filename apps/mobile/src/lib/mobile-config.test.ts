@@ -3,6 +3,7 @@ import {
   buildEditorPath,
   getClerkFrontendOrigin,
   isLoopbackOrigin,
+  resolveMediaUrl,
   resolveWebOrigin,
 } from "./mobile-config";
 
@@ -157,5 +158,48 @@ describe("isLoopbackOrigin", () => {
     expect(isLoopbackOrigin("https://cherryqube.vercel.app")).toBe(false);
     expect(isLoopbackOrigin(undefined)).toBe(false);
     expect(isLoopbackOrigin(null)).toBe(false);
+  });
+});
+
+describe("resolveMediaUrl", () => {
+  it("returns undefined for nil or empty values", () => {
+    expect(resolveMediaUrl(undefined)).toBeUndefined();
+    expect(resolveMediaUrl(null)).toBeUndefined();
+    expect(resolveMediaUrl("   ")).toBeUndefined();
+  });
+
+  it("rewrites localhost URLs to emulator origin when origin is 10.0.2.2:3000", () => {
+    expect(
+      resolveMediaUrl(
+        "http://localhost:3000/api/media/renders/abc/def.mp4",
+        "http://10.0.2.2:3000",
+      ),
+    ).toBe("http://10.0.2.2:3000/api/media/renders/abc/def.mp4");
+
+    expect(
+      resolveMediaUrl(
+        "http://127.0.0.1:3000/api/media/renders/abc/def.mp4",
+        "http://10.0.2.2:3000",
+      ),
+    ).toBe("http://10.0.2.2:3000/api/media/renders/abc/def.mp4");
+  });
+
+  it("resolves relative media paths using origin", () => {
+    expect(
+      resolveMediaUrl("/api/media/renders/abc/def.mp4", "http://10.0.2.2:3000"),
+    ).toBe("http://10.0.2.2:3000/api/media/renders/abc/def.mp4");
+
+    expect(
+      resolveMediaUrl("api/media/renders/abc/def.mp4", "http://10.0.2.2:3000"),
+    ).toBe("http://10.0.2.2:3000/api/media/renders/abc/def.mp4");
+  });
+
+  it("leaves remote media URLs untouched", () => {
+    expect(
+      resolveMediaUrl(
+        "https://s3.us-east-1.amazonaws.com/bucket/renders/video.mp4",
+        "http://10.0.2.2:3000",
+      ),
+    ).toBe("https://s3.us-east-1.amazonaws.com/bucket/renders/video.mp4");
   });
 });

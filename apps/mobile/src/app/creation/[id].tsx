@@ -21,15 +21,9 @@ import { FloralSprig } from "@/components/ui/floral-sprig";
 import { PillBadge, type PillBadgeVariant } from "@/components/ui/pill-badge";
 import { PrimaryButton } from "@/components/ui/primary-button";
 import { useScreenActivity } from "@/hooks/use-screen-activity";
-import { WEB_ORIGIN } from "@/lib/mobile-config";
+import { resolveMediaUrl, WEB_ORIGIN } from "@/lib/mobile-config";
 import { shareCreation } from "@/lib/native-share";
 import { mobileTheme } from "@/theme/theme";
-
-function resolveMediaUrl(url?: string | null) {
-  if (!url) return undefined;
-  if (url.startsWith("http://") || url.startsWith("https://")) return url;
-  return `${WEB_ORIGIN}${url.startsWith("/") ? "" : "/"}${url}`;
-}
 
 export default function CreationDetailRoute() {
   const { id, renderId: initialRenderId } = useLocalSearchParams<{
@@ -78,7 +72,14 @@ export default function CreationDetailRoute() {
 
   useEffect(() => {
     if (videoUrl && player) {
-      player.play();
+      if (typeof player.replaceAsync === "function") {
+        void player.replaceAsync(videoUrl).then(() => {
+          player.play();
+        }).catch(() => {});
+      } else {
+        player.replace(videoUrl);
+        player.play();
+      }
     }
   }, [player, videoUrl]);
 
