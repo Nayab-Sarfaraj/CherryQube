@@ -388,16 +388,12 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
   },
   pageDescription: {
-    backgroundColor: mobileTheme.colors.palette.marigold + "1A",
-    borderColor: mobileTheme.colors.border + "55",
-    borderRadius: 18,
-    borderWidth: 1,
     fontFamily: "Figtree_400Regular",
     fontSize: 14,
     lineHeight: 20,
     color: mobileTheme.colors.muted,
     marginBottom: 16,
-    padding: 16,
+    maxWidth: 320,
   },
   batchActionsRow: {
     flexDirection: "row",

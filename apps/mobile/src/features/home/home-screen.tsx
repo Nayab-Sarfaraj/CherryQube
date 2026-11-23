@@ -3,7 +3,14 @@ import { router } from "expo-router";
 import { mobileTemplateCatalog } from "@greetings/remotion/mobile-template-catalog";
 import { orderTemplates, themeNames, type ThemeId } from "@greetings/shared";
 import { useMemo, useState } from "react";
-import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  FlatList,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { FloralSprig } from "@/components/ui/floral-sprig";
 import { WEB_ORIGIN } from "@/lib/mobile-config";
@@ -19,7 +26,6 @@ function posterUrl(path: string) {
 export function HomeScreen() {
   const [type, setType] = useState<TypeFilter>("all");
   const [theme, setTheme] = useState<ThemeFilter>("all");
-
   const templates = useMemo(
     () =>
       orderTemplates(mobileTemplateCatalog).filter(
@@ -29,254 +35,299 @@ export function HomeScreen() {
       ),
     [theme, type],
   );
+  const [featured, ...gallery] = templates;
 
   return (
     <SafeAreaView edges={["top"]} style={styles.safe}>
       <FlatList
-        data={templates}
+        data={gallery}
         keyExtractor={(item) => item.id}
         numColumns={2}
         contentContainerStyle={styles.list}
         columnWrapperStyle={styles.row}
         ListHeaderComponent={
-          <View>
-            <View style={styles.hero}>
-              <View style={styles.brandRow}>
-                <FloralSprig size={34} />
-                <Text style={styles.kicker}>CherryQube</Text>
+          <>
+            <View style={styles.topBar}>
+              <View style={styles.wordmark}>
+                <FloralSprig size={25} />
+                <Text style={styles.brand}>CherryQube</Text>
               </View>
-              <Text style={styles.title}>Made to be shared, kept forever.</Text>
-              <Text style={styles.copy}>
-                Begin with a seasonal card or invitation, then make it yours.
-              </Text>
+              <Text style={styles.season}>The holiday studio</Text>
             </View>
-            <FilterRow
-              values={["all", "card", "invitation"] as const}
-              selected={type}
-              label={(value) =>
-                value === "all"
-                  ? "All"
-                  : value === "card"
-                    ? "Cards"
-                    : "Invitations"
-              }
-              onSelect={setType}
-            />
-            <FilterRow
-              values={["all", "thanksgiving", "christmas", "new-year"] as const}
-              selected={theme}
-              label={(value) =>
-                value === "all" ? "All holidays" : themeNames[value]
-              }
-              onSelect={setTheme}
-            />
-          </View>
+            <Text style={styles.title}>Make a moment worth keeping.</Text>
+            <Text style={styles.copy}>
+              Personalise a moving card or invitation for the people you love.
+            </Text>
+            <TypeNavigation selected={type} onSelect={setType} />
+            <SeasonNavigation selected={theme} onSelect={setTheme} />
+            {featured ? <FeaturedTemplate template={featured} /> : null}
+            <Text style={styles.galleryTitle}>Choose a design</Text>
+          </>
         }
         ListEmptyComponent={
-          <Text style={styles.empty}>No templates match those filters.</Text>
+          <Text style={styles.empty}>No designs match those selections.</Text>
         }
-        renderItem={({ item }) => (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`Create ${item.title}`}
-            onPress={() =>
-              router.push({
-                pathname: "/editor/[templateId]",
-                params: { templateId: item.id },
-              })
-            }
-            style={styles.card}
-          >
-            <View style={styles.posterContainer}>
-              <Image
-                source={posterUrl(item.posterPath)}
-                style={styles.poster}
-                contentFit="cover"
-                cachePolicy="disk"
-              />
-              <View
-                style={[
-                  styles.badge,
-                  item.type === "card"
-                    ? styles.cardBadge
-                    : styles.invitationBadge,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.badgeText,
-                    item.type === "card"
-                      ? styles.cardBadgeText
-                      : styles.invitationBadgeText,
-                  ]}
-                >
-                  {item.type === "card" ? "Card" : "Invitation"}
-                </Text>
-              </View>
-            </View>
-            <Text style={styles.cardTitle}>{item.title}</Text>
-            <Text style={styles.cardMeta}>
-              {themeNames[item.themeId]} ·{" "}
-              {item.type === "card" ? "5–8s" : "20–30s"}
-            </Text>
-          </Pressable>
-        )}
+        renderItem={({ item }) => <TemplateTile template={item} />}
       />
     </SafeAreaView>
   );
 }
 
-function FilterRow<T extends string>({
-  values,
+function TypeNavigation({
   selected,
-  label,
   onSelect,
 }: {
-  values: readonly T[];
-  selected: T;
-  label: (value: T) => string;
-  onSelect: (value: T) => void;
+  selected: TypeFilter;
+  onSelect: (value: TypeFilter) => void;
 }) {
+  const values = ["all", "card", "invitation"] as const;
   return (
-    <View style={styles.filters}>
+    <View style={styles.typeNavigation}>
       {values.map((value) => (
         <Pressable
           key={value}
-          accessibilityRole="button"
-          accessibilityLabel={`Filter by ${label(value)}`}
           onPress={() => onSelect(value)}
-          style={[styles.filter, selected === value && styles.filterSelected]}
+          style={styles.typeItem}
         >
           <Text
             style={[
-              styles.filterText,
-              selected === value && styles.filterTextSelected,
+              styles.typeLabel,
+              selected === value && styles.typeLabelActive,
             ]}
           >
-            {label(value)}
+            {value === "all"
+              ? "All designs"
+              : value === "card"
+                ? "Cards"
+                : "Invitations"}
           </Text>
+          <View
+            style={[
+              styles.typeRule,
+              selected === value && styles.typeRuleActive,
+            ]}
+          />
         </Pressable>
       ))}
     </View>
   );
 }
 
+function SeasonNavigation({
+  selected,
+  onSelect,
+}: {
+  selected: ThemeFilter;
+  onSelect: (value: ThemeFilter) => void;
+}) {
+  const values = ["all", "thanksgiving", "christmas", "new-year"] as const;
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.seasonNavigation}
+    >
+      {values.map((value) => (
+        <Pressable
+          key={value}
+          onPress={() => onSelect(value)}
+          style={styles.seasonItem}
+        >
+          <Text
+            style={[
+              styles.seasonLabel,
+              selected === value && styles.seasonLabelActive,
+            ]}
+          >
+            {value === "all" ? "Every celebration" : themeNames[value]}
+          </Text>
+        </Pressable>
+      ))}
+    </ScrollView>
+  );
+}
+
+function FeaturedTemplate({
+  template,
+}: {
+  template: (typeof mobileTemplateCatalog)[number];
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Create ${template.title}`}
+      onPress={() =>
+        router.push({
+          pathname: "/editor/[templateId]",
+          params: { templateId: template.id },
+        })
+      }
+      style={styles.featured}
+    >
+      <Image
+        source={posterUrl(template.posterPath)}
+        style={styles.featuredPoster}
+        contentFit="cover"
+        cachePolicy="disk"
+      />
+      <View style={styles.featuredCaption}>
+        <Text style={styles.featuredMeta}>
+          {themeNames[template.themeId]} ·{" "}
+          {template.type === "card" ? "Animated card" : "Video invitation"}
+        </Text>
+        <Text style={styles.featuredTitle}>{template.title}</Text>
+        <Text style={styles.featuredAction}>Make this design</Text>
+      </View>
+    </Pressable>
+  );
+}
+
+function TemplateTile({
+  template,
+}: {
+  template: (typeof mobileTemplateCatalog)[number];
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Create ${template.title}`}
+      onPress={() =>
+        router.push({
+          pathname: "/editor/[templateId]",
+          params: { templateId: template.id },
+        })
+      }
+      style={styles.tile}
+    >
+      <Image
+        source={posterUrl(template.posterPath)}
+        style={styles.tilePoster}
+        contentFit="cover"
+        cachePolicy="disk"
+      />
+      <Text style={styles.tileTitle} numberOfLines={2}>
+        {template.title}
+      </Text>
+      <Text style={styles.tileMeta}>
+        {template.type === "card" ? "Card" : "Invitation"} ·{" "}
+        {template.type === "card" ? "5–8 sec" : "20–30 sec"}
+      </Text>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: mobileTheme.colors.background },
-  list: { padding: 16, paddingBottom: 32 },
-  row: { gap: 12 },
-  hero: {
-    backgroundColor: mobileTheme.colors.palette.marigold + "1F",
-    borderColor: mobileTheme.colors.border + "55",
-    borderRadius: 24,
-    borderWidth: 1,
+  safe: { flex: 1, backgroundColor: mobileTheme.colors.canvas },
+  list: { paddingBottom: 28, paddingHorizontal: 18 },
+  row: { gap: 14 },
+  topBar: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginTop: 8,
-    overflow: "hidden",
-    padding: 20,
   },
-  brandRow: { alignItems: "center", flexDirection: "row", gap: 8 },
-  kicker: {
-    color: mobileTheme.colors.muted,
-    fontFamily: "Figtree_600SemiBold",
-    fontSize: 15,
+  wordmark: { alignItems: "center", flexDirection: "row", gap: 7 },
+  brand: {
+    color: mobileTheme.colors.ink,
+    fontFamily: "Fraunces_600SemiBold",
+    fontSize: 20,
+  },
+  season: {
+    color: mobileTheme.colors.quietInk,
+    fontFamily: "Figtree_500Medium",
+    fontSize: 12,
   },
   title: {
     color: mobileTheme.colors.ink,
     fontFamily: "Fraunces_600SemiBold",
-    fontSize: 32,
-    lineHeight: 38,
-    marginTop: 18,
+    fontSize: 34,
+    lineHeight: 40,
+    marginTop: 34,
+    maxWidth: 320,
   },
   copy: {
-    color: mobileTheme.colors.ink,
+    color: mobileTheme.colors.quietInk,
     fontFamily: "Figtree_400Regular",
     fontSize: 16,
     lineHeight: 24,
-    marginTop: 8,
-  },
-  filters: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginTop: 18,
-    marginBottom: 10,
-  },
-  filter: {
-    borderColor: mobileTheme.colors.border,
-    borderRadius: 999,
-    borderWidth: 1,
-    minHeight: 48,
-    justifyContent: "center",
-    paddingHorizontal: 14,
-  },
-  filterSelected: {
-    backgroundColor: mobileTheme.colors.accent,
-    borderColor: mobileTheme.colors.accent,
-  },
-  filterText: {
-    color: mobileTheme.colors.ink,
-    fontFamily: "Figtree_500Medium",
-  },
-  filterTextSelected: { color: mobileTheme.colors.surface },
-  card: { flex: 1, marginTop: 14, minWidth: 0 },
-  posterContainer: {
-    width: "100%",
-    aspectRatio: 0.69,
-    borderRadius: 20,
-    overflow: "hidden",
-    backgroundColor: mobileTheme.colors.surface,
-    borderWidth: 1,
-    borderColor: mobileTheme.colors.border + "33",
-    position: "relative",
-  },
-  poster: { width: "100%", height: "100%" },
-  badge: {
-    position: "absolute",
-    top: 8,
-    left: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-  },
-  badgeText: {
-    fontFamily: "Figtree_600SemiBold",
-    fontSize: 11,
-  },
-  cardBadge: {
-    backgroundColor: mobileTheme.colors.surface,
-    borderWidth: 1,
-    borderColor: mobileTheme.colors.border + "55",
-  },
-  cardBadgeText: {
-    fontFamily: "Figtree_600SemiBold",
-    fontSize: 11,
-    color: mobileTheme.colors.ink,
-  },
-  invitationBadge: {
-    backgroundColor: mobileTheme.colors.accent,
-  },
-  invitationBadgeText: {
-    fontFamily: "Figtree_600SemiBold",
-    fontSize: 11,
-    color: mobileTheme.colors.surface,
-  },
-  cardTitle: {
-    color: mobileTheme.colors.ink,
-    fontFamily: "Fraunces_600SemiBold",
-    fontSize: 18,
-    lineHeight: 22,
     marginTop: 10,
+    maxWidth: 300,
   },
-  cardMeta: {
-    color: mobileTheme.colors.muted,
+  typeNavigation: { flexDirection: "row", gap: 20, marginTop: 28 },
+  typeItem: { alignItems: "center", gap: 6, minHeight: 32 },
+  typeLabel: {
+    color: mobileTheme.colors.quietInk,
+    fontFamily: "Figtree_500Medium",
+    fontSize: 14,
+  },
+  typeLabelActive: {
+    color: mobileTheme.colors.ink,
+    fontFamily: "Figtree_600SemiBold",
+  },
+  typeRule: { backgroundColor: "transparent", height: 1, width: "100%" },
+  typeRuleActive: { backgroundColor: mobileTheme.colors.accent },
+  seasonNavigation: { gap: 18, marginTop: 12, paddingRight: 18 },
+  seasonItem: { minHeight: 34, justifyContent: "center" },
+  seasonLabel: {
+    color: mobileTheme.colors.quietInk,
     fontFamily: "Figtree_400Regular",
     fontSize: 13,
+  },
+  seasonLabelActive: {
+    color: mobileTheme.colors.accent,
+    fontFamily: "Figtree_600SemiBold",
+  },
+  featured: { marginTop: 18 },
+  featuredPoster: { aspectRatio: 1.42, borderRadius: 3, width: "100%" },
+  featuredCaption: {
+    backgroundColor: mobileTheme.colors.paper,
+    marginHorizontal: 12,
+    marginTop: -52,
+    padding: 16,
+  },
+  featuredMeta: {
+    color: mobileTheme.colors.quietInk,
+    fontFamily: "Figtree_500Medium",
+    fontSize: 12,
+  },
+  featuredTitle: {
+    color: mobileTheme.colors.ink,
+    fontFamily: "Fraunces_600SemiBold",
+    fontSize: 22,
+    lineHeight: 28,
     marginTop: 4,
   },
-  empty: {
+  featuredAction: {
+    color: mobileTheme.colors.accent,
+    fontFamily: "Figtree_600SemiBold",
+    fontSize: 13,
+    marginTop: 10,
+  },
+  galleryTitle: {
     color: mobileTheme.colors.ink,
-    fontFamily: "Figtree_400Regular",
+    fontFamily: "Fraunces_600SemiBold",
+    fontSize: 24,
     marginTop: 32,
+  },
+  tile: { flex: 1, marginTop: 16, minWidth: 0 },
+  tilePoster: { aspectRatio: 0.72, borderRadius: 2, width: "100%" },
+  tileTitle: {
+    color: mobileTheme.colors.ink,
+    fontFamily: "Fraunces_600SemiBold",
+    fontSize: 17,
+    lineHeight: 22,
+    marginTop: 9,
+  },
+  tileMeta: {
+    color: mobileTheme.colors.quietInk,
+    fontFamily: "Figtree_400Regular",
+    fontSize: 12,
+    marginTop: 3,
+  },
+  empty: {
+    color: mobileTheme.colors.quietInk,
+    fontFamily: "Figtree_400Regular",
+    paddingVertical: 36,
     textAlign: "center",
   },
 });

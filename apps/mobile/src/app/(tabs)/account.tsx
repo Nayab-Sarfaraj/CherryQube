@@ -139,6 +139,7 @@ export default function AccountTab() {
     return (
       <SafeAreaView edges={["top"]} style={styles.safe}>
         <View style={styles.header}>
+          <FloralSprig size={42} />
           <Text style={styles.title}>Your account</Text>
           <Text style={styles.headerCopy}>
             Your saved celebrations and export preferences.
@@ -205,6 +206,7 @@ export default function AccountTab() {
   return (
     <SafeAreaView edges={["top"]} style={styles.safe}>
       <View style={styles.header}>
+        <FloralSprig size={42} />
         <Text style={styles.title}>Your account</Text>
         <Text style={styles.headerCopy}>
           Everything connected to your celebrations.
@@ -319,16 +321,15 @@ const styles = StyleSheet.create({
     backgroundColor: mobileTheme.colors.background,
   },
   header: {
-    backgroundColor: mobileTheme.colors.palette.marigold + "1A",
-    borderBottomColor: mobileTheme.colors.border + "44",
-    borderBottomWidth: 1,
+    backgroundColor: mobileTheme.colors.palette.marigold + "2B",
     paddingHorizontal: 20,
-    paddingVertical: 20,
+    paddingVertical: 26,
   },
   title: {
     color: mobileTheme.colors.ink,
     fontFamily: "Fraunces_600SemiBold",
-    fontSize: 26,
+    fontSize: 30,
+    marginTop: 16,
   },
   headerCopy: {
     color: mobileTheme.colors.muted,
@@ -343,11 +344,9 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   card: {
-    backgroundColor: mobileTheme.colors.surface,
-    borderRadius: 20,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: mobileTheme.colors.border + "33",
+    borderBottomColor: mobileTheme.colors.hairline,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingBottom: 20,
   },
   cardSectionTitle: {
     fontFamily: "Figtree_600SemiBold",
@@ -425,11 +424,8 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   signedOutCard: {
-    backgroundColor: mobileTheme.colors.palette.marigold + "1A",
-    borderRadius: 24,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: mobileTheme.colors.border + "33",
+    backgroundColor: mobileTheme.colors.palette.marigold + "2B",
+    padding: 28,
     alignItems: "center",
   },
   signedOutTitle: {
@@ -462,10 +458,8 @@ const styles = StyleSheet.create({
     color: mobileTheme.colors.surface,
   },
   linksCard: {
-    backgroundColor: mobileTheme.colors.surface,
-    borderRadius: 20,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: mobileTheme.colors.border + "33",
+    borderTopColor: mobileTheme.colors.hairline,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingTop: 8,
   },
 });

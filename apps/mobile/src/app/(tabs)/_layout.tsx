@@ -4,30 +4,13 @@ import {
   CreationsTabIcon,
   HomeTabIcon,
 } from "@/components/ui/tab-icons";
-import { mobileTheme } from "@/theme/theme";
+import { EditorialTabBar } from "@/components/ui/editorial-tab-bar";
 
 export default function TabsLayout() {
   return (
     <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: mobileTheme.colors.accent,
-        tabBarInactiveTintColor: mobileTheme.colors.muted,
-        tabBarShowLabel: true,
-        tabBarLabelStyle: {
-          fontFamily: "Figtree_600SemiBold",
-          fontSize: 11,
-          marginBottom: 4,
-        },
-        tabBarStyle: {
-          backgroundColor: mobileTheme.colors.surface,
-          borderTopColor: mobileTheme.colors.border + "33",
-          borderTopWidth: 1,
-          height: 60,
-          paddingTop: 6,
-          paddingBottom: 6,
-        },
-      }}
+      tabBar={(props) => <EditorialTabBar {...props} />}
+      screenOptions={{ headerShown: false }}
     >
       <Tabs.Screen
         name="index"

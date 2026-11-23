@@ -111,8 +111,7 @@ export default function CreationsTab() {
           <FloralSprig size={48} style={styles.authSprig} />
           <Text style={styles.title}>Keep your celebrations close.</Text>
           <Text style={styles.copy}>
-            Sign in to revisit your saved cards and invitations from any
-            device.
+            Sign in to revisit your saved cards and invitations from any device.
           </Text>
           <Pressable
             accessibilityRole="button"
@@ -347,12 +346,8 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   header: {
-    backgroundColor: mobileTheme.colors.palette.marigold + "1A",
-    borderColor: mobileTheme.colors.border + "44",
-    borderRadius: 24,
-    borderWidth: 1,
-    marginBottom: 20,
-    padding: 20,
+    marginBottom: 24,
+    paddingTop: 8,
   },
   headerBrandRow: {
     alignItems: "center",
@@ -394,12 +389,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   card: {
-    backgroundColor: mobileTheme.colors.surface,
-    borderColor: mobileTheme.colors.border + "88",
-    borderWidth: 1,
-    borderRadius: 20,
-    padding: 16,
-    marginBottom: 14,
+    borderBottomColor: mobileTheme.colors.hairline,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    marginBottom: 18,
+    paddingBottom: 18,
   },
   cardPressed: {
     opacity: 0.9,
@@ -409,15 +402,15 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   posterThumbnail: {
-    width: 68,
-    height: 96,
-    borderRadius: 12,
+    width: 84,
+    height: 118,
+    borderRadius: 2,
     backgroundColor: mobileTheme.colors.border,
   },
   posterPlaceholder: {
-    width: 68,
-    height: 96,
-    borderRadius: 12,
+    width: 84,
+    height: 118,
+    borderRadius: 2,
     backgroundColor: mobileTheme.colors.border,
     alignItems: "center",
     justifyContent: "center",
@@ -460,15 +453,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "flex-end",
     alignItems: "center",
-    marginTop: 10,
-    borderTopColor: mobileTheme.colors.border + "66",
-    borderTopWidth: StyleSheet.hairlineWidth,
-    paddingTop: 8,
+    marginTop: 2,
   },
   deleteButton: {
-    borderColor: mobileTheme.colors.border + "55",
-    borderRadius: 999,
-    borderWidth: 1,
     minHeight: 48,
     paddingHorizontal: 12,
     justifyContent: "center",
