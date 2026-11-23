@@ -45,6 +45,18 @@ describe("resolveWebOrigin", () => {
       );
     });
 
+    it("translates subdomains of localhost (*.localhost) to 10.0.2.2 without broken hostnames", () => {
+      expect(
+        resolveWebOrigin("http://test.localhost:3000", "android", false),
+      ).toBe("http://10.0.2.2:3000");
+    });
+
+    it("translates IPv6 loopback ([::1]) to 10.0.2.2 on Android emulator", () => {
+      expect(resolveWebOrigin("http://[::1]:3000", "android", false)).toBe(
+        "http://10.0.2.2:3000",
+      );
+    });
+
     it("defaults to 10.0.2.2:3000 when unconfigured on Android emulator", () => {
       expect(resolveWebOrigin(undefined, "android", false)).toBe(
         "http://10.0.2.2:3000",
@@ -71,9 +83,27 @@ describe("resolveWebOrigin", () => {
       ).toThrowError(/physical device.*localhost/i);
     });
 
+    it("rejects *.localhost subdomains on physical devices", () => {
+      expect(() =>
+        resolveWebOrigin("http://test.localhost:3000", "android", true),
+      ).toThrowError(/physical device/i);
+    });
+
     it("rejects 127.0.0.1 with a descriptive error on physical devices", () => {
       expect(() =>
         resolveWebOrigin("http://127.0.0.1:3000", "android", true),
+      ).toThrowError(/physical device/i);
+    });
+
+    it("rejects IPv6 loopback ([::1]) on physical devices", () => {
+      expect(() =>
+        resolveWebOrigin("http://[::1]:3000", "android", true),
+      ).toThrowError(/physical device/i);
+    });
+
+    it("rejects 0.0.0.0 wildcard loopback on physical devices", () => {
+      expect(() =>
+        resolveWebOrigin("http://0.0.0.0:3000", "android", true),
       ).toThrowError(/physical device/i);
     });
 
@@ -112,11 +142,14 @@ describe("resolveWebOrigin", () => {
 });
 
 describe("isLoopbackOrigin", () => {
-  it("identifies localhost, 127.0.0.1, and loopback subdomains", () => {
+  it("identifies localhost, 127.0.0.1, IPv6 [::1], 0.0.0.0, and loopback subdomains", () => {
     expect(isLoopbackOrigin("http://localhost:3000")).toBe(true);
     expect(isLoopbackOrigin("http://127.0.0.1:3000")).toBe(true);
+    expect(isLoopbackOrigin("http://[::1]:3000")).toBe(true);
+    expect(isLoopbackOrigin("http://0.0.0.0:3000")).toBe(true);
     expect(isLoopbackOrigin("localhost:3000")).toBe(true);
     expect(isLoopbackOrigin("http://test.localhost:3000")).toBe(true);
+    expect(isLoopbackOrigin("[::1]:3000")).toBe(true);
   });
 
   it("identifies LAN IPs and public domains as non-loopback", () => {

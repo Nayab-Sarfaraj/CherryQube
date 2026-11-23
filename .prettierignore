@@ -9,3 +9,5 @@ apps/mobile/ios
 pnpm-lock.yaml
 .turbo
 apps/mobile/package-lock.json
+apps/mobile/expo-env.d.ts
+**/expo-env.d.ts

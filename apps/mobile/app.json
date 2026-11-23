@@ -27,8 +27,20 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
+      [
+        "expo-dev-client",
+        {
+          "toolsButton": false,
+          "showMenuAtLaunch": false
+        }
+      ],
       "@clerk/expo",
-      "@clerk/expo-native-components",
+      [
+        "@clerk/expo-native-components",
+        {
+          "theme": "./clerk-theme.json"
+        }
+      ],
       [
         "expo-splash-screen",
         {

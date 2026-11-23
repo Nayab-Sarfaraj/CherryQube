@@ -10,6 +10,7 @@ import {
 } from "@/lib/mobile-config";
 import { shareCreation } from "@/lib/native-share";
 import { pickAndUploadPhoto } from "@/lib/photo-upload";
+import { mobileTheme } from "@/theme/theme";
 import {
   parseWebToNativeBridgeMessage,
   type NativeToWebBridgeMessage,
@@ -234,10 +235,13 @@ export function GreetingWebView({
         domStorageEnabled
         javaScriptEnabled
         mediaPlaybackRequiresUserAction={false}
+        sharedCookiesEnabled
+        thirdPartyCookiesEnabled
         startInLoadingState
+        style={styles.webView}
         renderLoading={() => (
           <View style={styles.loading}>
-            <ActivityIndicator color="#7A2430" />
+            <ActivityIndicator color={mobileTheme.colors.border} />
             <Text style={styles.loadingText}>
               Loading your greeting studio…
             </Text>
@@ -273,37 +277,48 @@ export function GreetingWebView({
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFF8E8" },
+  container: { flex: 1, backgroundColor: mobileTheme.colors.background },
+  webView: { backgroundColor: mobileTheme.colors.background },
   loading: {
     ...StyleSheet.absoluteFill,
     alignItems: "center",
+    backgroundColor: mobileTheme.colors.background,
     justifyContent: "center",
     gap: 12,
   },
-  loadingText: { color: "#173E31", fontSize: 15 },
+  loadingText: { color: mobileTheme.colors.ink, fontSize: 15 },
   error: {
     position: "absolute",
     left: 16,
     right: 16,
     bottom: 24,
     borderRadius: 12,
-    backgroundColor: "#173E31",
+    backgroundColor: mobileTheme.colors.ink,
     padding: 16,
   },
-  errorText: { color: "#FFF8E8", fontSize: 14 },
-  retry: { color: "#F6C662", fontSize: 14, fontWeight: "700", marginTop: 8 },
+  errorText: { color: mobileTheme.colors.surface, fontSize: 14 },
+  retry: {
+    color: mobileTheme.colors.palette.marigold,
+    fontSize: 14,
+    fontWeight: "700",
+    marginTop: 8,
+  },
   signedOut: {
     position: "absolute",
     left: 16,
     right: 16,
     top: 12,
     borderRadius: 10,
-    backgroundColor: "#FFF8E8E8",
+    backgroundColor: mobileTheme.colors.background + "E8",
     padding: 10,
   },
-  signedOutText: { color: "#173E31", fontSize: 13, textAlign: "center" },
+  signedOutText: {
+    color: mobileTheme.colors.ink,
+    fontSize: 13,
+    textAlign: "center",
+  },
   signIn: {
-    color: "#7A2430",
+    color: mobileTheme.colors.accent,
     fontSize: 14,
     fontWeight: "700",
     marginTop: 4,

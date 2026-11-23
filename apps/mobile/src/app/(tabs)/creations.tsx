@@ -108,10 +108,11 @@ export default function CreationsTab() {
     return (
       <SafeAreaView edges={["top"]} style={styles.safe}>
         <View style={styles.contentContainer}>
-          <Text style={styles.title}>My creations</Text>
+          <FloralSprig size={48} style={styles.authSprig} />
+          <Text style={styles.title}>Keep your celebrations close.</Text>
           <Text style={styles.copy}>
-            Sign in to view your saved cards, video invitations, and export
-            history across all your devices.
+            Sign in to revisit your saved cards and invitations from any
+            device.
           </Text>
           <Pressable
             accessibilityRole="button"
@@ -147,7 +148,10 @@ export default function CreationsTab() {
         }
         ListHeaderComponent={
           <View style={styles.header}>
-            <Text style={styles.kicker}>CherryQube</Text>
+            <View style={styles.headerBrandRow}>
+              <FloralSprig size={28} />
+              <Text style={styles.kicker}>CherryQube</Text>
+            </View>
             <Text style={styles.title}>My creations</Text>
             <Text style={styles.copy}>
               Manage your saved cards, monitor exports, and share links.
@@ -331,6 +335,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: 24,
   },
+  authSprig: { marginBottom: 16 },
   statusText: {
     color: mobileTheme.colors.ink,
     fontFamily: "Figtree_500Medium",
@@ -342,13 +347,23 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   header: {
+    backgroundColor: mobileTheme.colors.palette.marigold + "1A",
+    borderColor: mobileTheme.colors.border + "44",
+    borderRadius: 24,
+    borderWidth: 1,
     marginBottom: 20,
+    padding: 20,
+  },
+  headerBrandRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 8,
   },
   kicker: {
     color: mobileTheme.colors.muted,
     fontFamily: "Figtree_600SemiBold",
     fontSize: 16,
-    marginTop: 8,
+    marginTop: 10,
   },
   title: {
     color: mobileTheme.colors.ink,
@@ -380,9 +395,9 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: mobileTheme.colors.surface,
-    borderColor: mobileTheme.colors.border,
+    borderColor: mobileTheme.colors.border + "88",
     borderWidth: 1,
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 16,
     marginBottom: 14,
   },
@@ -396,13 +411,13 @@ const styles = StyleSheet.create({
   posterThumbnail: {
     width: 68,
     height: 96,
-    borderRadius: 8,
+    borderRadius: 12,
     backgroundColor: mobileTheme.colors.border,
   },
   posterPlaceholder: {
     width: 68,
     height: 96,
-    borderRadius: 8,
+    borderRadius: 12,
     backgroundColor: mobileTheme.colors.border,
     alignItems: "center",
     justifyContent: "center",
@@ -446,11 +461,14 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
     alignItems: "center",
     marginTop: 10,
-    borderTopColor: mobileTheme.colors.border,
+    borderTopColor: mobileTheme.colors.border + "66",
     borderTopWidth: StyleSheet.hairlineWidth,
     paddingTop: 8,
   },
   deleteButton: {
+    borderColor: mobileTheme.colors.border + "55",
+    borderRadius: 999,
+    borderWidth: 1,
     minHeight: 48,
     paddingHorizontal: 12,
     justifyContent: "center",

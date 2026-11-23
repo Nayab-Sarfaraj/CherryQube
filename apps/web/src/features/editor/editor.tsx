@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
-import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
+import Preview from "./preview";
 import {
   cardSchema,
   getTemplate,
@@ -22,17 +22,6 @@ declare global {
     ReactNativeWebView?: { postMessage(message: string): void };
   }
 }
-const Preview = dynamic(() => import("./preview"), {
-  ssr: false,
-  loading: () => (
-    <div
-      className="aspect-[9/16] animate-pulse rounded-xl bg-ink/10"
-      role="status"
-    >
-      Loading preview…
-    </div>
-  ),
-});
 type ContactMethod = "email" | "whatsapp" | "sms";
 const labels: Record<string, string> = {
   senderName: "Your name",

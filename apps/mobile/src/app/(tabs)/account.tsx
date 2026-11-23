@@ -139,7 +139,10 @@ export default function AccountTab() {
     return (
       <SafeAreaView edges={["top"]} style={styles.safe}>
         <View style={styles.header}>
-          <Text style={styles.title}>Account</Text>
+          <Text style={styles.title}>Your account</Text>
+          <Text style={styles.headerCopy}>
+            Your saved celebrations and export preferences.
+          </Text>
         </View>
         <View style={styles.signedOutContainer}>
           <View style={styles.signedOutCard}>
@@ -202,7 +205,10 @@ export default function AccountTab() {
   return (
     <SafeAreaView edges={["top"]} style={styles.safe}>
       <View style={styles.header}>
-        <Text style={styles.title}>Account</Text>
+        <Text style={styles.title}>Your account</Text>
+        <Text style={styles.headerCopy}>
+          Everything connected to your celebrations.
+        </Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -313,16 +319,23 @@ const styles = StyleSheet.create({
     backgroundColor: mobileTheme.colors.background,
   },
   header: {
+    backgroundColor: mobileTheme.colors.palette.marigold + "1A",
+    borderBottomColor: mobileTheme.colors.border + "44",
+    borderBottomWidth: 1,
     paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: mobileTheme.colors.border + "33",
-    backgroundColor: mobileTheme.colors.surface,
+    paddingVertical: 20,
   },
   title: {
     color: mobileTheme.colors.ink,
     fontFamily: "Fraunces_600SemiBold",
     fontSize: 26,
+  },
+  headerCopy: {
+    color: mobileTheme.colors.muted,
+    fontFamily: "Figtree_400Regular",
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: 4,
   },
   scrollContent: {
     padding: 16,
@@ -331,17 +344,15 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: mobileTheme.colors.surface,
-    borderRadius: 14,
+    borderRadius: 20,
     padding: 16,
     borderWidth: 1,
     borderColor: mobileTheme.colors.border + "33",
   },
   cardSectionTitle: {
     fontFamily: "Figtree_600SemiBold",
-    fontSize: 13,
+    fontSize: 14,
     color: mobileTheme.colors.muted,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
     marginBottom: 8,
   },
   emailText: {
@@ -414,8 +425,8 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   signedOutCard: {
-    backgroundColor: mobileTheme.colors.surface,
-    borderRadius: 16,
+    backgroundColor: mobileTheme.colors.palette.marigold + "1A",
+    borderRadius: 24,
     padding: 24,
     borderWidth: 1,
     borderColor: mobileTheme.colors.border + "33",
@@ -452,7 +463,7 @@ const styles = StyleSheet.create({
   },
   linksCard: {
     backgroundColor: mobileTheme.colors.surface,
-    borderRadius: 14,
+    borderRadius: 20,
     padding: 16,
     borderWidth: 1,
     borderColor: mobileTheme.colors.border + "33",

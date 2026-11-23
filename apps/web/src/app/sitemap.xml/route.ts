@@ -1,4 +1,3 @@
-import { siteConfig } from "@/lib/site-config";
 import { absoluteUrl, formatDate } from "@/lib/md/format";
 import { listMarkdownRoutes } from "@/lib/md/registry";
 

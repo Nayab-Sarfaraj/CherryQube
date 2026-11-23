@@ -348,7 +348,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: mobileTheme.colors.border + "44",
-    backgroundColor: mobileTheme.colors.surface,
+    backgroundColor: mobileTheme.colors.palette.marigold + "14",
   },
   backButton: {
     minHeight: 48,
@@ -388,11 +388,16 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
   },
   pageDescription: {
+    backgroundColor: mobileTheme.colors.palette.marigold + "1A",
+    borderColor: mobileTheme.colors.border + "55",
+    borderRadius: 18,
+    borderWidth: 1,
     fontFamily: "Figtree_400Regular",
     fontSize: 14,
     lineHeight: 20,
     color: mobileTheme.colors.muted,
     marginBottom: 16,
+    padding: 16,
   },
   batchActionsRow: {
     flexDirection: "row",
@@ -402,7 +407,7 @@ const styles = StyleSheet.create({
   batchButton: {
     flex: 1,
     minHeight: 48,
-    borderRadius: 8,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: mobileTheme.colors.border + "55",
     backgroundColor: mobileTheme.colors.surface,

@@ -37,10 +37,30 @@ export function isLoopbackOrigin(urlOrHost?: string | null): boolean {
     return (
       url.hostname === "localhost" ||
       url.hostname === "127.0.0.1" ||
+      url.hostname === "0.0.0.0" ||
+      url.hostname === "[::1]" ||
+      url.hostname === "[::]" ||
       url.hostname.endsWith(".localhost")
     );
   } catch {
-    return trimmed.includes("localhost") || trimmed.includes("127.0.0.1");
+    return (
+      trimmed.includes("localhost") ||
+      trimmed.includes("127.0.0.1") ||
+      trimmed.includes("0.0.0.0") ||
+      trimmed.includes("::1")
+    );
+  }
+}
+
+export function rewriteToAndroidEmulatorHost(origin: string): string {
+  try {
+    const hasProtocol = origin.includes("://");
+    const parsed = new URL(hasProtocol ? origin : `http://${origin}`);
+    parsed.hostname = "10.0.2.2";
+    const result = parsed.toString().replace(/\/$/, "");
+    return hasProtocol ? result : result.replace(/^http:\/\//, "");
+  } catch {
+    return "http://10.0.2.2:3000";
   }
 }
 
@@ -66,7 +86,7 @@ export function resolveWebOrigin(
 
   const clean = configured.replace(/\/$/, "");
   if (os === "android" && isLoopbackOrigin(clean)) {
-    return clean.replace(/localhost|127\.0\.0\.1/, "10.0.2.2");
+    return rewriteToAndroidEmulatorHost(clean);
   }
   return clean;
 }

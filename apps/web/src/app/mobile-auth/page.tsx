@@ -1,8 +1,8 @@
 "use client";
 
 import { useSignIn } from "@clerk/nextjs/legacy";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { safeMobileReturnPath } from "./return-path";
 
 declare global {
@@ -18,7 +18,6 @@ function nativeMessage(type: "AUTH_HANDOFF_COMPLETE" | "REQUEST_AUTH") {
 export default function MobileAuthPage() {
   const { isLoaded, signIn, setActive } = useSignIn();
   const params = useSearchParams();
-  const router = useRouter();
   const [error, setError] = useState("");
   const ticket = params.get("ticket");
   const returnPath = useMemo(
@@ -32,40 +31,41 @@ export default function MobileAuthPage() {
     return `${url.pathname}${url.search}${url.hash}`;
   }, [returnPath]);
 
+  const redemptionStarted = useRef(false);
+
   useEffect(() => {
     if (!ticket || !isLoaded || !signIn || !setActive) return;
-    window.history.replaceState(null, "", target);
-    let cancelled = false;
+    if (redemptionStarted.current) return;
+    redemptionStarted.current = true;
+
     void (async () => {
       try {
         const result = await signIn.create({ strategy: "ticket", ticket });
         if (!result.createdSessionId) throw new Error("Ticket not accepted");
         await setActive({ session: result.createdSessionId });
-        if (!cancelled) {
-          nativeMessage("AUTH_HANDOFF_COMPLETE");
-          router.replace(target);
-        }
+        nativeMessage("AUTH_HANDOFF_COMPLETE");
+        window.location.replace(target);
       } catch {
-        if (!cancelled)
-          setError(
-            "This sign-in link expired. Return to the app and try again.",
-          );
+        setError("This sign-in link expired. Return to the app and try again.");
       }
     })();
-    return () => {
-      cancelled = true;
-    };
-  }, [isLoaded, router, setActive, signIn, target, ticket]);
+  }, [isLoaded, setActive, signIn, target, ticket]);
+
+  const displayError =
+    error ||
+    (isLoaded && !ticket
+      ? "This sign-in link expired. Return to the app and try again."
+      : "");
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-md items-center px-6 text-center">
       <div>
         <h1 className="font-display text-3xl">Signing you in…</h1>
         <p className="mt-3">You can return to the app in a moment.</p>
-        {error && (
+        {displayError && (
           <div className="mt-4 space-y-3">
             <p role="alert" className="text-red-800">
-              {error}
+              {displayError}
             </p>
             <button
               type="button"

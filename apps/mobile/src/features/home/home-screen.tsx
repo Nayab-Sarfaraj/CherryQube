@@ -5,6 +5,7 @@ import { orderTemplates, themeNames, type ThemeId } from "@greetings/shared";
 import { useMemo, useState } from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { FloralSprig } from "@/components/ui/floral-sprig";
 import { WEB_ORIGIN } from "@/lib/mobile-config";
 import { mobileTheme } from "@/theme/theme";
 
@@ -39,11 +40,16 @@ export function HomeScreen() {
         columnWrapperStyle={styles.row}
         ListHeaderComponent={
           <View>
-            <Text style={styles.kicker}>CherryQube</Text>
-            <Text style={styles.title}>Make this season feel personal.</Text>
-            <Text style={styles.copy}>
-              Choose a ready-to-customize card or invitation.
-            </Text>
+            <View style={styles.hero}>
+              <View style={styles.brandRow}>
+                <FloralSprig size={34} />
+                <Text style={styles.kicker}>CherryQube</Text>
+              </View>
+              <Text style={styles.title}>Made to be shared, kept forever.</Text>
+              <Text style={styles.copy}>
+                Begin with a seasonal card or invitation, then make it yours.
+              </Text>
+            </View>
             <FilterRow
               values={["all", "card", "invitation"] as const}
               selected={type}
@@ -157,34 +163,43 @@ function FilterRow<T extends string>({
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: mobileTheme.colors.background },
-  list: { padding: 20, paddingBottom: 32 },
+  list: { padding: 16, paddingBottom: 32 },
   row: { gap: 12 },
+  hero: {
+    backgroundColor: mobileTheme.colors.palette.marigold + "1F",
+    borderColor: mobileTheme.colors.border + "55",
+    borderRadius: 24,
+    borderWidth: 1,
+    marginTop: 8,
+    overflow: "hidden",
+    padding: 20,
+  },
+  brandRow: { alignItems: "center", flexDirection: "row", gap: 8 },
   kicker: {
     color: mobileTheme.colors.muted,
     fontFamily: "Figtree_600SemiBold",
-    fontSize: 16,
-    marginTop: 8,
+    fontSize: 15,
   },
   title: {
     color: mobileTheme.colors.ink,
     fontFamily: "Fraunces_600SemiBold",
     fontSize: 32,
     lineHeight: 38,
-    marginTop: 12,
+    marginTop: 18,
   },
   copy: {
     color: mobileTheme.colors.ink,
     fontFamily: "Figtree_400Regular",
     fontSize: 16,
     lineHeight: 24,
-    marginTop: 10,
+    marginTop: 8,
   },
   filters: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
     marginTop: 18,
-    marginBottom: 8,
+    marginBottom: 10,
   },
   filter: {
     borderColor: mobileTheme.colors.border,
@@ -203,11 +218,11 @@ const styles = StyleSheet.create({
     fontFamily: "Figtree_500Medium",
   },
   filterTextSelected: { color: mobileTheme.colors.surface },
-  card: { flex: 1, marginTop: 16, minWidth: 0 },
+  card: { flex: 1, marginTop: 14, minWidth: 0 },
   posterContainer: {
     width: "100%",
     aspectRatio: 0.69,
-    borderRadius: 16,
+    borderRadius: 20,
     overflow: "hidden",
     backgroundColor: mobileTheme.colors.surface,
     borderWidth: 1,
@@ -221,7 +236,7 @@ const styles = StyleSheet.create({
     left: 8,
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 6,
+    borderRadius: 8,
   },
   badgeText: {
     fontFamily: "Figtree_600SemiBold",
@@ -248,8 +263,9 @@ const styles = StyleSheet.create({
   cardTitle: {
     color: mobileTheme.colors.ink,
     fontFamily: "Fraunces_600SemiBold",
-    fontSize: 17,
-    marginTop: 9,
+    fontSize: 18,
+    lineHeight: 22,
+    marginTop: 10,
   },
   cardMeta: {
     color: mobileTheme.colors.muted,
