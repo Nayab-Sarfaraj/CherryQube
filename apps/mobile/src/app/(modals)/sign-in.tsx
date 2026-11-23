@@ -1,7 +1,7 @@
 import { useOAuth } from "@clerk/expo";
 import { useSignIn, useSignUp } from "@clerk/expo/legacy";
 import { router } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -20,6 +20,7 @@ import { useMobileAuth } from "@/hooks/use-mobile-auth";
 import { CLERK_PUBLISHABLE_KEY } from "@/lib/mobile-config";
 import { mobileTheme } from "@/theme/theme";
 import {
+  createDismissalGuard,
   evaluateOAuthResult,
   evaluateSignInResult,
   evaluateSignUpResult,
@@ -123,8 +124,16 @@ function ClerkSignInContent({ onDismiss }: { onDismiss: () => void }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const isMountedRef = useRef(true);
   useEffect(() => {
-    if (isSignedIn) {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isSignedIn && isMountedRef.current) {
       onDismiss();
     }
   }, [isSignedIn, onDismiss]);
@@ -145,6 +154,7 @@ function ClerkSignInContent({ onDismiss }: { onDismiss: () => void }) {
 
     try {
       const attempt = await signIn.create({ identifier: trimmed });
+      if (!isMountedRef.current) return;
       const factor = attempt.supportedFirstFactors?.find(
         (f) => f.strategy === "email_code",
       );
@@ -153,14 +163,17 @@ function ClerkSignInContent({ onDismiss }: { onDismiss: () => void }) {
           strategy: "email_code",
           emailAddressId: factor.emailAddressId,
         });
+        if (!isMountedRef.current) return;
         setIsNewUser(false);
         setStep("verify");
       } else {
+        if (!isMountedRef.current) return;
         setError(
           "Email verification code is not configured for this account. Please sign in with Google.",
         );
       }
     } catch (err: unknown) {
+      if (!isMountedRef.current) return;
       const clerkErr = err as {
         errors?: { code?: string; message?: string }[];
       };
@@ -168,21 +181,27 @@ function ClerkSignInContent({ onDismiss }: { onDismiss: () => void }) {
       if (errCode === "form_identifier_not_found") {
         try {
           await signUp.create({ emailAddress: trimmed });
+          if (!isMountedRef.current) return;
           await signUp.prepareEmailAddressVerification({
             strategy: "email_code",
           });
+          if (!isMountedRef.current) return;
           setIsNewUser(true);
           setStep("verify");
         } catch (signUpErr) {
+          if (!isMountedRef.current) return;
           setError(
             getErrorMessage(signUpErr, "Failed to send verification code."),
           );
         }
       } else {
+        if (!isMountedRef.current) return;
         setError(getErrorMessage(err, "Could not start email sign-in."));
       }
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -202,11 +221,14 @@ function ClerkSignInContent({ onDismiss }: { onDismiss: () => void }) {
         const result = await signUp.attemptEmailAddressVerification({
           code: cleanCode,
         });
+        if (!isMountedRef.current) return;
         const outcome = evaluateSignUpResult(result);
         if (outcome.success && outcome.sessionId) {
           await setSignUpActive({ session: outcome.sessionId });
-          onDismiss();
-        } else {
+          if (isMountedRef.current) {
+            onDismiss();
+          }
+        } else if (isMountedRef.current) {
           setError(
             outcome.error ||
               "Verification was not completed. Please check your code and try again.",
@@ -218,11 +240,14 @@ function ClerkSignInContent({ onDismiss }: { onDismiss: () => void }) {
           strategy: "email_code",
           code: cleanCode,
         });
+        if (!isMountedRef.current) return;
         const outcome = evaluateSignInResult(result);
         if (outcome.success && outcome.sessionId) {
           await setSignInActive({ session: outcome.sessionId });
-          onDismiss();
-        } else {
+          if (isMountedRef.current) {
+            onDismiss();
+          }
+        } else if (isMountedRef.current) {
           setError(
             outcome.error ||
               "Verification was not completed. Please check your code and try again.",
@@ -230,14 +255,18 @@ function ClerkSignInContent({ onDismiss }: { onDismiss: () => void }) {
         }
       }
     } catch (err) {
-      setError(
-        getErrorMessage(
-          err,
-          "Invalid or expired verification code. Please try again.",
-        ),
-      );
+      if (isMountedRef.current) {
+        setError(
+          getErrorMessage(
+            err,
+            "Invalid or expired verification code. Please try again.",
+          ),
+        );
+      }
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -246,20 +275,27 @@ function ClerkSignInContent({ onDismiss }: { onDismiss: () => void }) {
       setIsLoading(true);
       setError(null);
       const result = await startOAuthFlow();
+      if (!isMountedRef.current) return;
       const outcome = evaluateOAuthResult(result);
       if (outcome.success && outcome.sessionId && result.setActive) {
         await result.setActive({ session: outcome.sessionId });
-        onDismiss();
-      } else {
+        if (isMountedRef.current) {
+          onDismiss();
+        }
+      } else if (isMountedRef.current) {
         setError(
           outcome.error ||
             "Google sign-in could not be completed. Please try again.",
         );
       }
     } catch (err) {
-      setError(getErrorMessage(err, "Could not complete Google sign-in."));
+      if (isMountedRef.current) {
+        setError(getErrorMessage(err, "Could not complete Google sign-in."));
+      }
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -454,12 +490,25 @@ function ClerkSignInContent({ onDismiss }: { onDismiss: () => void }) {
 }
 
 export default function SignInModal() {
-  const hasDismissedRef = useRef(false);
+  const guard = useMemo(
+    () =>
+      createDismissalGuard(() => {
+        router.back();
+      }),
+    [],
+  );
+
+  useEffect(() => {
+    return () => {
+      // Mark as dismissed on unmount so any pending async authentication callbacks
+      // (e.g. if the user swiped down or used hardware back) cannot pop the caller screen.
+      guard.markDismissed();
+    };
+  }, [guard]);
+
   const dismissModal = useCallback(() => {
-    if (hasDismissedRef.current) return;
-    hasDismissedRef.current = true;
-    router.back();
-  }, []);
+    guard.dismiss();
+  }, [guard]);
 
   if (!CLERK_PUBLISHABLE_KEY) {
     return <NoClerkKeyFallback onDismiss={dismissModal} />;

@@ -141,10 +141,24 @@ describe("createDismissalGuard", () => {
     const dismissMock = vi.fn();
     const guard = createDismissalGuard(dismissMock);
 
-    expect(guard()).toBe(true);
-    expect(guard()).toBe(false);
-    expect(guard()).toBe(false);
+    expect(guard.dismiss()).toBe(true);
+    expect(guard.dismiss()).toBe(false);
+    expect(guard.dismiss()).toBe(false);
 
     expect(dismissMock).toHaveBeenCalledTimes(1);
+    expect(guard.isDismissed()).toBe(true);
+  });
+
+  it("blocks dismiss if modal was removed natively before completion", () => {
+    const dismissMock = vi.fn();
+    const guard = createDismissalGuard(dismissMock);
+
+    // Modal unmounts natively (e.g. swipe down or Android hardware back)
+    guard.markDismissed();
+    expect(guard.isDismissed()).toBe(true);
+
+    // Late continuation after unmount
+    expect(guard.dismiss()).toBe(false);
+    expect(dismissMock).not.toHaveBeenCalled();
   });
 });

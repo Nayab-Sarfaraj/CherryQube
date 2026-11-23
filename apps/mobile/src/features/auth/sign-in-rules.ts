@@ -104,12 +104,24 @@ export function evaluateOAuthResult(result: OAuthResult): EvaluationOutcome {
   };
 }
 
-export function createDismissalGuard(dismiss: () => void): () => boolean {
+export type DismissalGuard = {
+  dismiss: () => boolean;
+  markDismissed: () => void;
+  isDismissed: () => boolean;
+};
+
+export function createDismissalGuard(dismiss: () => void): DismissalGuard {
   let dismissed = false;
-  return () => {
-    if (dismissed) return false;
-    dismissed = true;
-    dismiss();
-    return true;
+  return {
+    dismiss: () => {
+      if (dismissed) return false;
+      dismissed = true;
+      dismiss();
+      return true;
+    },
+    markDismissed: () => {
+      dismissed = true;
+    },
+    isDismissed: () => dismissed,
   };
 }

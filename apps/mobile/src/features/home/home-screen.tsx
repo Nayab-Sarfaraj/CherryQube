@@ -23,9 +23,23 @@ function posterUrl(path: string) {
   return `${WEB_ORIGIN}${path.startsWith("/") ? "" : "/"}${path}`;
 }
 
+const typeOptions: { label: string; value: TypeFilter }[] = [
+  { label: "All designs", value: "all" },
+  { label: "Cards", value: "card" },
+  { label: "Invitations", value: "invitation" },
+];
+
+const seasonOptions: { label: string; value: ThemeFilter }[] = [
+  { label: "All celebrations", value: "all" },
+  { label: "Thanksgiving", value: "thanksgiving" },
+  { label: "Christmas", value: "christmas" },
+  { label: "New Year's Eve", value: "new-year" },
+];
+
 export function HomeScreen() {
   const [type, setType] = useState<TypeFilter>("all");
   const [theme, setTheme] = useState<ThemeFilter>("all");
+
   const templates = useMemo(
     () =>
       orderTemplates(mobileTemplateCatalog).filter(
@@ -35,152 +49,109 @@ export function HomeScreen() {
       ),
     [theme, type],
   );
-  const [featured, ...gallery] = templates;
 
   return (
     <SafeAreaView edges={["top"]} style={styles.safe}>
       <FlatList
-        data={gallery}
+        data={templates}
         keyExtractor={(item) => item.id}
         numColumns={2}
         contentContainerStyle={styles.list}
         columnWrapperStyle={styles.row}
+        showsVerticalScrollIndicator={false}
         ListHeaderComponent={
-          <>
+          <View style={styles.header}>
             <View style={styles.topBar}>
-              <View style={styles.wordmark}>
-                <FloralSprig size={25} />
-                <Text style={styles.brand}>CherryQube</Text>
+              <View style={styles.brandRow}>
+                <FloralSprig size={26} />
+                <Text style={styles.brandTitle}>CHERRYQUBE</Text>
               </View>
-              <Text style={styles.season}>The holiday studio</Text>
+              <Text style={styles.brandKicker}>The holiday studio</Text>
             </View>
-            <Text style={styles.title}>Make a moment worth keeping.</Text>
-            <Text style={styles.copy}>
-              Personalise a moving card or invitation for the people you love.
-            </Text>
-            <TypeNavigation selected={type} onSelect={setType} />
-            <SeasonNavigation selected={theme} onSelect={setTheme} />
-            {featured ? <FeaturedTemplate template={featured} /> : null}
-            <Text style={styles.galleryTitle}>Choose a design</Text>
-          </>
+
+            <View style={styles.greetingBlock}>
+              <Text style={styles.headline}>Make a moment worth keeping.</Text>
+              <Text style={styles.subhead}>
+                Personalise a moving card or video invitation for the people you
+                love.
+              </Text>
+            </View>
+
+            <View style={styles.typeRow}>
+              {typeOptions.map((opt) => {
+                const active = type === opt.value;
+                return (
+                  <Pressable
+                    key={opt.value}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Filter by ${opt.label}`}
+                    onPress={() => setType(opt.value)}
+                    style={[styles.typePill, active && styles.typePillActive]}
+                  >
+                    <Text
+                      style={[
+                        styles.typePillText,
+                        active && styles.typePillTextActive,
+                      ]}
+                    >
+                      {opt.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.seasonChips}
+            >
+              {seasonOptions.map((opt) => {
+                const active = theme === opt.value;
+                return (
+                  <Pressable
+                    key={opt.value}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Filter by ${opt.label}`}
+                    onPress={() => setTheme(opt.value)}
+                    style={[
+                      styles.seasonChip,
+                      active && styles.seasonChipActive,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.seasonChipText,
+                        active && styles.seasonChipTextActive,
+                      ]}
+                    >
+                      {opt.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Choose a design</Text>
+              <Text style={styles.countText}>
+                {templates.length}{" "}
+                {templates.length === 1 ? "design" : "designs"}
+              </Text>
+            </View>
+          </View>
         }
         ListEmptyComponent={
-          templates.length === 0 ? (
-            <Text style={styles.empty}>No designs match those selections.</Text>
-          ) : undefined
+          <View style={styles.emptyWrap}>
+            <Text style={styles.emptyTitle}>No designs found</Text>
+            <Text style={styles.emptyText}>
+              Try adjusting your format or celebration filters above.
+            </Text>
+          </View>
         }
         renderItem={({ item }) => <TemplateTile template={item} />}
       />
     </SafeAreaView>
-  );
-}
-
-function TypeNavigation({
-  selected,
-  onSelect,
-}: {
-  selected: TypeFilter;
-  onSelect: (value: TypeFilter) => void;
-}) {
-  const values = ["all", "card", "invitation"] as const;
-  return (
-    <View style={styles.typeNavigation}>
-      {values.map((value) => (
-        <Pressable
-          key={value}
-          onPress={() => onSelect(value)}
-          style={styles.typeItem}
-        >
-          <Text
-            style={[
-              styles.typeLabel,
-              selected === value && styles.typeLabelActive,
-            ]}
-          >
-            {value === "all"
-              ? "All designs"
-              : value === "card"
-                ? "Cards"
-                : "Invitations"}
-          </Text>
-          <View
-            style={[
-              styles.typeRule,
-              selected === value && styles.typeRuleActive,
-            ]}
-          />
-        </Pressable>
-      ))}
-    </View>
-  );
-}
-
-function SeasonNavigation({
-  selected,
-  onSelect,
-}: {
-  selected: ThemeFilter;
-  onSelect: (value: ThemeFilter) => void;
-}) {
-  const values = ["all", "thanksgiving", "christmas", "new-year"] as const;
-  return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.seasonNavigation}
-    >
-      {values.map((value) => (
-        <Pressable
-          key={value}
-          onPress={() => onSelect(value)}
-          style={styles.seasonItem}
-        >
-          <Text
-            style={[
-              styles.seasonLabel,
-              selected === value && styles.seasonLabelActive,
-            ]}
-          >
-            {value === "all" ? "Every celebration" : themeNames[value]}
-          </Text>
-        </Pressable>
-      ))}
-    </ScrollView>
-  );
-}
-
-function FeaturedTemplate({
-  template,
-}: {
-  template: (typeof mobileTemplateCatalog)[number];
-}) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`Create ${template.title}`}
-      onPress={() =>
-        router.push({
-          pathname: "/editor/[templateId]",
-          params: { templateId: template.id },
-        })
-      }
-      style={styles.featured}
-    >
-      <Image
-        source={posterUrl(template.posterPath)}
-        style={styles.featuredPoster}
-        contentFit="cover"
-        cachePolicy="disk"
-      />
-      <View style={styles.featuredCaption}>
-        <Text style={styles.featuredMeta}>
-          {themeNames[template.themeId]} ·{" "}
-          {template.type === "card" ? "Animated card" : "Video invitation"}
-        </Text>
-        <Text style={styles.featuredTitle}>{template.title}</Text>
-        <Text style={styles.featuredAction}>Make this design</Text>
-      </View>
-    </Pressable>
   );
 }
 
@@ -199,137 +170,307 @@ function TemplateTile({
           params: { templateId: template.id },
         })
       }
-      style={styles.tile}
+      style={({ pressed }) => [
+        styles.tileCard,
+        pressed && styles.tileCardPressed,
+      ]}
     >
-      <Image
-        source={posterUrl(template.posterPath)}
-        style={styles.tilePoster}
-        contentFit="cover"
-        cachePolicy="disk"
-      />
-      <Text style={styles.tileTitle} numberOfLines={2}>
-        {template.title}
-      </Text>
-      <Text style={styles.tileMeta}>
-        {template.type === "card" ? "Card" : "Invitation"} ·{" "}
-        {template.type === "card" ? "5–8 sec" : "20–30 sec"}
-      </Text>
+      <View style={styles.posterWrapper}>
+        <Image
+          source={posterUrl(template.posterPath)}
+          style={styles.tilePoster}
+          contentFit="cover"
+          cachePolicy="disk"
+        />
+        <View style={styles.badgeWrap}>
+          <View
+            style={[
+              styles.typeBadge,
+              template.type === "card"
+                ? styles.cardBadge
+                : styles.invitationBadge,
+            ]}
+          >
+            <Text
+              style={[
+                styles.typeBadgeText,
+                template.type === "card"
+                  ? styles.cardBadgeText
+                  : styles.invitationBadgeText,
+              ]}
+            >
+              {template.type === "card" ? "Card" : "Video"}
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.tileInfo}>
+        <Text style={styles.tileMeta}>
+          {themeNames[template.themeId]} ·{" "}
+          {template.type === "card" ? "5–8s" : "20–30s"}
+        </Text>
+        <Text style={styles.tileTitle} numberOfLines={2}>
+          {template.title}
+        </Text>
+        <View style={styles.actionRow}>
+          <Text style={styles.actionText}>Make design</Text>
+          <Text style={styles.actionArrow}>→</Text>
+        </View>
+      </View>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: mobileTheme.colors.canvas },
-  list: { paddingBottom: 28, paddingHorizontal: 18 },
-  row: { gap: 14 },
+  safe: {
+    backgroundColor: mobileTheme.colors.canvas,
+    flex: 1,
+  },
+  list: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 110,
+  },
+  row: {
+    gap: 12,
+  },
+  header: {
+    marginBottom: 16,
+  },
   topBar: {
     alignItems: "center",
     flexDirection: "row",
     justifyContent: "space-between",
-    marginTop: 8,
+    paddingTop: 4,
+    paddingBottom: 8,
   },
-  wordmark: { alignItems: "center", flexDirection: "row", gap: 7 },
-  brand: {
+  brandRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 8,
+  },
+  brandTitle: {
     color: mobileTheme.colors.ink,
     fontFamily: "Fraunces_600SemiBold",
-    fontSize: 20,
+    fontSize: 18,
+    letterSpacing: 1.5,
   },
-  season: {
+  brandKicker: {
     color: mobileTheme.colors.quietInk,
     fontFamily: "Figtree_500Medium",
     fontSize: 12,
   },
-  title: {
+  greetingBlock: {
+    marginTop: 14,
+    marginBottom: 18,
+  },
+  headline: {
     color: mobileTheme.colors.ink,
     fontFamily: "Fraunces_600SemiBold",
-    fontSize: 34,
-    lineHeight: 40,
-    marginTop: 34,
+    fontSize: 26,
+    lineHeight: 32,
     maxWidth: 320,
   },
-  copy: {
+  subhead: {
     color: mobileTheme.colors.quietInk,
     fontFamily: "Figtree_400Regular",
-    fontSize: 16,
-    lineHeight: 24,
-    marginTop: 10,
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: 6,
     maxWidth: 300,
   },
-  typeNavigation: { flexDirection: "row", gap: 20, marginTop: 28 },
-  typeItem: { alignItems: "center", gap: 6, minHeight: 32 },
-  typeLabel: {
-    color: mobileTheme.colors.quietInk,
-    fontFamily: "Figtree_500Medium",
-    fontSize: 14,
+  typeRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 12,
   },
-  typeLabelActive: {
+  typePill: {
+    alignItems: "center",
+    backgroundColor: mobileTheme.colors.surface,
+    borderColor: mobileTheme.colors.hairline,
+    borderRadius: mobileTheme.radius.pill,
+    borderWidth: 1,
+    flex: 1,
+    justifyContent: "center",
+    minHeight: 38,
+    paddingHorizontal: 10,
+    ...mobileTheme.shadows.pill,
+  },
+  typePillActive: {
+    backgroundColor: mobileTheme.colors.accent,
+    borderColor: mobileTheme.colors.accent,
+  },
+  typePillText: {
     color: mobileTheme.colors.ink,
-    fontFamily: "Figtree_600SemiBold",
-  },
-  typeRule: { backgroundColor: "transparent", height: 1, width: "100%" },
-  typeRuleActive: { backgroundColor: mobileTheme.colors.accent },
-  seasonNavigation: { gap: 18, marginTop: 12, paddingRight: 18 },
-  seasonItem: { minHeight: 34, justifyContent: "center" },
-  seasonLabel: {
-    color: mobileTheme.colors.quietInk,
-    fontFamily: "Figtree_400Regular",
+    fontFamily: "Figtree_500Medium",
     fontSize: 13,
   },
-  seasonLabelActive: {
-    color: mobileTheme.colors.accent,
+  typePillTextActive: {
+    color: mobileTheme.colors.surface,
     fontFamily: "Figtree_600SemiBold",
   },
-  featured: { marginTop: 18 },
-  featuredPoster: { aspectRatio: 1.42, borderRadius: 3, width: "100%" },
-  featuredCaption: {
-    backgroundColor: mobileTheme.colors.paper,
-    marginHorizontal: 12,
-    marginTop: -52,
-    padding: 16,
+  seasonChips: {
+    gap: 8,
+    paddingRight: 24,
+    paddingBottom: 4,
   },
-  featuredMeta: {
+  seasonChip: {
+    alignItems: "center",
+    backgroundColor: mobileTheme.colors.surface,
+    borderColor: mobileTheme.colors.hairline,
+    borderRadius: mobileTheme.radius.pill,
+    borderWidth: 1,
+    justifyContent: "center",
+    minHeight: 34,
+    paddingHorizontal: 14,
+  },
+  seasonChipActive: {
+    backgroundColor: mobileTheme.colors.ink,
+    borderColor: mobileTheme.colors.ink,
+  },
+  seasonChipText: {
     color: mobileTheme.colors.quietInk,
     fontFamily: "Figtree_500Medium",
     fontSize: 12,
   },
-  featuredTitle: {
-    color: mobileTheme.colors.ink,
-    fontFamily: "Fraunces_600SemiBold",
-    fontSize: 22,
-    lineHeight: 28,
-    marginTop: 4,
-  },
-  featuredAction: {
-    color: mobileTheme.colors.accent,
+  seasonChipTextActive: {
+    color: mobileTheme.colors.surface,
     fontFamily: "Figtree_600SemiBold",
-    fontSize: 13,
-    marginTop: 10,
   },
-  galleryTitle: {
+  sectionHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 22,
+    marginBottom: 4,
+    paddingHorizontal: 2,
+  },
+  sectionTitle: {
     color: mobileTheme.colors.ink,
     fontFamily: "Fraunces_600SemiBold",
-    fontSize: 24,
-    marginTop: 32,
+    fontSize: 19,
   },
-  tile: { flex: 1, marginTop: 16, minWidth: 0 },
-  tilePoster: { aspectRatio: 0.72, borderRadius: 2, width: "100%" },
-  tileTitle: {
+  countText: {
+    color: mobileTheme.colors.quietInk,
+    fontFamily: "Figtree_500Medium",
+    fontSize: 12,
+  },
+  tileCard: {
+    backgroundColor: mobileTheme.colors.surface,
+    borderColor: mobileTheme.colors.hairline,
+    borderRadius: 18,
+    borderWidth: 1,
+    flex: 1,
+    marginBottom: 12,
+    minWidth: 0,
+    padding: 8,
+    ...mobileTheme.shadows.card,
+  },
+  tileCardPressed: {
+    opacity: 0.92,
+  },
+  posterWrapper: {
+    aspectRatio: 0.72,
+    backgroundColor: mobileTheme.colors.surfaceMuted,
+    borderRadius: 12,
+    overflow: "hidden",
+    position: "relative",
+    width: "100%",
+  },
+  tilePoster: {
+    height: "100%",
+    width: "100%",
+  },
+  badgeWrap: {
+    left: 7,
+    position: "absolute",
+    top: 7,
+  },
+  typeBadge: {
+    borderRadius: mobileTheme.radius.pill,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  typeBadgeText: {
+    fontFamily: "Figtree_600SemiBold",
+    fontSize: 10,
+  },
+  cardBadge: {
+    backgroundColor: mobileTheme.colors.surface + "EE",
+    borderColor: mobileTheme.colors.hairline,
+    borderWidth: 1,
+  },
+  cardBadgeText: {
     color: mobileTheme.colors.ink,
-    fontFamily: "Fraunces_600SemiBold",
-    fontSize: 17,
-    lineHeight: 22,
-    marginTop: 9,
+    fontFamily: "Figtree_600SemiBold",
+    fontSize: 10,
+  },
+  invitationBadge: {
+    backgroundColor: mobileTheme.colors.accent,
+  },
+  invitationBadgeText: {
+    color: mobileTheme.colors.surface,
+    fontFamily: "Figtree_600SemiBold",
+    fontSize: 10,
+  },
+  tileInfo: {
+    paddingHorizontal: 4,
+    paddingTop: 8,
+    paddingBottom: 2,
   },
   tileMeta: {
     color: mobileTheme.colors.quietInk,
-    fontFamily: "Figtree_400Regular",
-    fontSize: 12,
+    fontFamily: "Figtree_500Medium",
+    fontSize: 11,
+  },
+  tileTitle: {
+    color: mobileTheme.colors.ink,
+    fontFamily: "Fraunces_600SemiBold",
+    fontSize: 15,
+    lineHeight: 19,
     marginTop: 3,
   },
-  empty: {
+  actionRow: {
+    alignItems: "center",
+    borderTopColor: mobileTheme.colors.hairline,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 8,
+    paddingTop: 6,
+  },
+  actionText: {
+    color: mobileTheme.colors.accent,
+    fontFamily: "Figtree_600SemiBold",
+    fontSize: 12,
+  },
+  actionArrow: {
+    color: mobileTheme.colors.accent,
+    fontSize: 12,
+  },
+  emptyWrap: {
+    alignItems: "center",
+    backgroundColor: mobileTheme.colors.surface,
+    borderColor: mobileTheme.colors.hairline,
+    borderRadius: 18,
+    borderWidth: 1,
+    marginTop: 16,
+    paddingVertical: 36,
+    paddingHorizontal: 20,
+    ...mobileTheme.shadows.card,
+  },
+  emptyTitle: {
+    color: mobileTheme.colors.ink,
+    fontFamily: "Fraunces_600SemiBold",
+    fontSize: 18,
+    marginBottom: 6,
+  },
+  emptyText: {
     color: mobileTheme.colors.quietInk,
     fontFamily: "Figtree_400Regular",
-    paddingVertical: 36,
+    fontSize: 13,
+    lineHeight: 18,
     textAlign: "center",
   },
 });
