@@ -4,11 +4,18 @@ export const renderJobSchema = z.object({
   id: z.string(),
   invitationId: z.string().optional(),
   invitationIds: z.array(z.string()).optional(),
-  status: z.enum(["queued", "rendering", "ready", "failed"]),
+  status: z.enum([
+    "queued",
+    "rendering",
+    "ready",
+    "failed",
+    "submission_uncertain",
+  ]),
   tier: z.enum(["free", "hd"]),
   fileUrl: z.string().optional(),
   posterUrl: z.string().optional(),
   error: z.string().optional(),
+  progress: z.number().min(0).max(100).optional(),
 });
 
 export const hostContactSchema = z.object({

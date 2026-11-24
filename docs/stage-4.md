@@ -12,4 +12,4 @@ Verified with the isolated `greetings_stage4_test` MongoDB database: photo norma
 
 Clerk keys are still needed to exercise browser sign-in, upload, and export together. The backend pipeline test invokes the services with synthetic owners; it does not bypass authentication in any shipped route.
 
-S3 presigned uploads and lifecycle rules, Lambda/webhook integration, cloud cost measurement, AWS budget alarms, and concurrency provisioning remain pending for cloud deployment. Local storage and worker processes cannot be deployed as-is to Vercel's ephemeral runtime.
+Local storage and worker processes cannot be deployed as-is to Vercel's ephemeral runtime. When Remotion Lambda is configured, the web service atomically claims every new or retried render, including HD renders, and submits it directly to Lambda; no local worker is required for those jobs. Lambda status is reconciled before timeout sweeping, while the local worker remains the development-only renderer. S3 upload/lifecycle setup, Lambda cost measurement, AWS budget alarms, and concurrency provisioning remain required before cloud deployment.

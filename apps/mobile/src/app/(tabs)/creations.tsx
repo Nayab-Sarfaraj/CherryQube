@@ -19,6 +19,7 @@ import {
 } from "@/features/creations/use-creations";
 import { FloralSprig } from "@/components/ui/floral-sprig";
 import { PillBadge, type PillBadgeVariant } from "@/components/ui/pill-badge";
+import { getCreationStatusBadge } from "@/features/creations/status";
 import { PrimaryButton } from "@/components/ui/primary-button";
 import { useMobileAuth } from "@/hooks/use-mobile-auth";
 import { useScreenActivity } from "@/hooks/use-screen-activity";
@@ -216,7 +217,9 @@ export default function CreationsTab() {
             ? (themeNames[item.themeId as ThemeId] ?? item.themeId)
             : "";
           const typeLabel = item.type === "card" ? "Card" : "Invitation";
-          const status = item.status.toLowerCase();
+          const status = (
+            item.currentRender?.status || item.status
+          ).toLowerCase();
 
           return (
             <Pressable
@@ -308,20 +311,7 @@ export default function CreationsTab() {
 }
 
 function StatusBadge({ status }: { status: string }) {
-  let variant: PillBadgeVariant = "draft";
-  let label = "Draft";
-
-  if (status === "queued" || status === "rendering") {
-    variant = "rendering";
-    label = "Rendering";
-  } else if (status === "ready") {
-    variant = "ready";
-    label = "Ready";
-  } else if (status === "failed") {
-    variant = "failed";
-    label = "Failed";
-  }
-
+  const { variant, label } = getCreationStatusBadge(status);
   return <PillBadge label={label} variant={variant} size="sm" />;
 }
 

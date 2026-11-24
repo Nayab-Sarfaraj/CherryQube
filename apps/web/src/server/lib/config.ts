@@ -100,6 +100,11 @@ export function checkoutEnabled() {
   );
 }
 
+/** Paid exports remain implemented, but are opt-in until billing is launched. */
+export function paidExportsEnabled() {
+  return process.env.NEXT_PUBLIC_ENABLE_PAID_EXPORTS === "true";
+}
+
 const anthropicModel = z.string().regex(/^[a-zA-Z0-9._-]{1,100}$/);
 export function llmSettings() {
   return {
@@ -109,4 +114,28 @@ export function llmSettings() {
     ),
     timeoutMs: 15000,
   };
+}
+
+export function remotionLambdaEnabled(): boolean {
+  return Boolean(
+    process.env.REMOTION_AWS_FUNCTION_NAME &&
+    process.env.REMOTION_SERVE_URL &&
+    (process.env.REMOTION_BUCKET_NAME || process.env.S3_BUCKET),
+  );
+}
+
+export function remotionLambdaConfig() {
+  if (!remotionLambdaEnabled()) return null;
+  const rawRegion =
+    process.env.REMOTION_AWS_REGION || process.env.AWS_REGION || "us-east-1";
+  return {
+    region: rawRegion,
+    functionName: process.env.REMOTION_AWS_FUNCTION_NAME!,
+    serveUrl: process.env.REMOTION_SERVE_URL!,
+    bucketName: (process.env.REMOTION_BUCKET_NAME || process.env.S3_BUCKET)!,
+  };
+}
+
+export function cronSecret(): string | null {
+  return process.env.CRON_SECRET?.trim() || null;
 }

@@ -1,10 +1,11 @@
-import * as Clipboard from "expo-clipboard";
+import { copyToClipboard } from "@/lib/safe-clipboard";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { router, useLocalSearchParams } from "expo-router";
 import { themeNames, type ThemeId } from "@greetings/shared";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -19,17 +20,12 @@ import {
 } from "@/features/creations/use-creations";
 import { FloralSprig } from "@/components/ui/floral-sprig";
 import { PillBadge, type PillBadgeVariant } from "@/components/ui/pill-badge";
+import { getCreationStatusBadge } from "@/features/creations/status";
 import { PrimaryButton } from "@/components/ui/primary-button";
 import { useScreenActivity } from "@/hooks/use-screen-activity";
-import { WEB_ORIGIN } from "@/lib/mobile-config";
+import { resolveMediaUrl, WEB_ORIGIN } from "@/lib/mobile-config";
 import { shareCreation } from "@/lib/native-share";
 import { mobileTheme } from "@/theme/theme";
-
-function resolveMediaUrl(url?: string | null) {
-  if (!url) return undefined;
-  if (url.startsWith("http://") || url.startsWith("https://")) return url;
-  return `${WEB_ORIGIN}${url.startsWith("/") ? "" : "/"}${url}`;
-}
 
 export default function CreationDetailRoute() {
   const { id, renderId: initialRenderId } = useLocalSearchParams<{
@@ -69,24 +65,64 @@ export default function CreationDetailRoute() {
   );
   const publicUrl = creation?.publicUrl;
 
+  const userPausedRef = useRef(false);
+  const loadIdRef = useRef(0);
+
   const player = useVideoPlayer(videoUrl ?? null, (p) => {
     p.loop = true;
-    if (videoUrl) {
+    if (videoUrl && !userPausedRef.current) {
       p.play();
     }
   });
 
   useEffect(() => {
+    if (!player) return;
+    const sub = player.addListener?.("playingChange", (payload: { isPlaying: boolean }) => {
+      userPausedRef.current = !payload.isPlaying;
+    });
+    return () => {
+      sub?.remove?.();
+    };
+  }, [player]);
+
+  useEffect(() => {
     if (videoUrl && player) {
-      player.play();
+      const currentLoadId = ++loadIdRef.current;
+      if (typeof player.replaceAsync === "function") {
+        void player
+          .replaceAsync(videoUrl)
+          .then(() => {
+            if (currentLoadId === loadIdRef.current && !userPausedRef.current) {
+              player.play();
+            }
+          })
+          .catch(() => {});
+      } else {
+        player.replace(videoUrl);
+        if (!userPausedRef.current) {
+          player.play();
+        }
+      }
     }
   }, [player, videoUrl]);
 
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/(tabs)/creations");
+    }
+  };
+
   const handleCopyLink = async () => {
     if (!publicUrl) return;
-    await Clipboard.setStringAsync(publicUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
+    const ok = await copyToClipboard(publicUrl);
+    if (ok) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } else {
+      Alert.alert("Unable to copy", "Could not copy the link to your clipboard.");
+    }
   };
 
   const handleShare = async () => {
@@ -111,18 +147,8 @@ export default function CreationDetailRoute() {
   const typeLabel = creation?.type === "card" ? "Card" : "Invitation";
   const isInvitation = creation?.type === "invitation";
 
-  let statusVariant: PillBadgeVariant = "draft";
-  let statusText = "Draft";
-  if (currentStatus === "queued" || currentStatus === "rendering") {
-    statusVariant = "rendering";
-    statusText = "Rendering";
-  } else if (currentStatus === "ready") {
-    statusVariant = "ready";
-    statusText = "Ready";
-  } else if (currentStatus === "failed") {
-    statusVariant = "failed";
-    statusText = "Failed";
-  }
+  const { variant: statusVariant, label: statusText } =
+    getCreationStatusBadge(currentStatus);
 
   if (isCreationLoading && !creation) {
     return (
@@ -172,7 +198,7 @@ export default function CreationDetailRoute() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Back"
-          onPress={() => router.back()}
+          onPress={handleBack}
           style={styles.backButton}
           hitSlop={8}
         >
@@ -206,7 +232,24 @@ export default function CreationDetailRoute() {
               color={mobileTheme.colors.accent}
               style={styles.spinner}
             />
-            <Text style={styles.stateTitle}>Your video is rendering</Text>
+            <Text style={styles.stateTitle}>
+              {typeof renderJob?.progress === "number" && renderJob.progress > 0
+                ? `Rendering your video (${renderJob.progress}%)`
+                : "Your video is rendering"}
+            </Text>
+            {typeof renderJob?.progress === "number" &&
+              renderJob.progress > 0 && (
+                <View style={styles.progressBarBg}>
+                  <View
+                    style={[
+                      styles.progressBarFill,
+                      {
+                        width: `${Math.min(100, Math.max(5, renderJob.progress))}%`,
+                      },
+                    ]}
+                  />
+                </View>
+              )}
             <Text style={styles.stateCopy}>
               We’re rendering your high-quality video. This usually takes under
               a minute. You can wait here or come back anytime.
@@ -307,7 +350,23 @@ export default function CreationDetailRoute() {
           </View>
         )}
 
-        {/* 4. Draft state */}
+        {/* 4. Submission uncertain / recovery state */}
+        {currentStatus === "submission_uncertain" && (
+          <View style={[styles.stateCard, mobileTheme.shadows.card]}>
+            <Text style={styles.stateTitle}>Submission being recovered</Text>
+            <Text style={styles.stateCopy}>
+              We could not confirm this export. Do not retry; it is being
+              recovered.
+            </Text>
+            {(activeRenderId || renderJob?.id) && (
+              <Text style={styles.recoveryReference}>
+                Reference: {renderJob?.id || activeRenderId}
+              </Text>
+            )}
+          </View>
+        )}
+
+        {/* 5. Draft state */}
         {currentStatus === "draft" && (
           <View style={[styles.stateCard, mobileTheme.shadows.card]}>
             <FloralSprig size={32} style={{ marginBottom: 10 }} />
@@ -422,12 +481,34 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     textAlign: "center",
   },
+  progressBarBg: {
+    backgroundColor: mobileTheme.colors.surfaceMuted,
+    borderColor: mobileTheme.colors.hairline,
+    borderRadius: mobileTheme.radius.pill,
+    borderWidth: 1,
+    height: 8,
+    marginVertical: 12,
+    overflow: "hidden",
+    width: "100%",
+  },
+  progressBarFill: {
+    backgroundColor: mobileTheme.colors.accent,
+    borderRadius: mobileTheme.radius.pill,
+    height: "100%",
+  },
   stateCopy: {
     color: mobileTheme.colors.quietInk,
     fontFamily: "Figtree_400Regular",
     fontSize: 14,
     lineHeight: 21,
     marginBottom: 16,
+    textAlign: "center",
+  },
+  recoveryReference: {
+    color: mobileTheme.colors.quietInk,
+    fontFamily: "Figtree_500Medium",
+    fontSize: 12,
+    marginTop: 4,
     textAlign: "center",
   },
   videoWrapper: {

@@ -53,6 +53,7 @@
         "expo-image-picker",
         {
           "photosPermission": "Allow CherryQube to use a photo in your greeting.",
+          "cameraPermission": false,
           "microphonePermission": false
         }
       ]

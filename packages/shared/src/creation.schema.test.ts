@@ -18,6 +18,14 @@ describe("creation schemas", () => {
       posterUrl: "http://example.com/poster.jpg",
     };
     expect(renderJobSchema.parse(valid)).toEqual(valid);
+
+    const uncertain = {
+      id: "render-2",
+      status: "submission_uncertain",
+      tier: "free",
+      error: "Render submission unconfirmed",
+    };
+    expect(renderJobSchema.parse(uncertain)).toEqual(uncertain);
   });
 
   it("validates invitationDetailSchema with optional publicUrl and currentRender", () => {

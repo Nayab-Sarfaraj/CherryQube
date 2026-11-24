@@ -27,10 +27,13 @@ function Controls({
   onExportRequested,
 }: Props) {
   const { isLoaded, isSignedIn } = useAppAuth();
+  const paidExportsEnabled =
+    process.env.NEXT_PUBLIC_ENABLE_PAID_EXPORTS === "true";
   const [quality, setQuality] = useState<ExportQuality>("free");
   const exportedRenderId = useRef<string | null>(null);
 
   useEffect(() => {
+    if (!paidExportsEnabled) return;
     const timer = setTimeout(() => {
       if (
         new URLSearchParams(window.location.search).get("checkout") ===
@@ -39,7 +42,7 @@ function Controls({
         setQuality("hd");
     }, 0);
     return () => clearTimeout(timer);
-  }, []);
+  }, [paidExportsEnabled]);
 
   const { saveDraft, exportVideo, job, busy, savedId, prepareDraft } =
     useExportCreation(input, photo, initialId, quality);
@@ -107,11 +110,17 @@ function Controls({
     );
   return (
     <section aria-label="Save and export" className="mt-6 space-y-3">
-      <ExportQualityOptions
-        quality={quality}
-        onChange={setQuality}
-        disabled={busy}
-      />
+      {paidExportsEnabled ? (
+        <ExportQualityOptions
+          quality={quality}
+          onChange={setQuality}
+          disabled={busy}
+        />
+      ) : (
+        <p className="text-sm opacity-80">
+          Exports are generated in 720p with a watermark.
+        </p>
+      )}
       <div className="flex flex-wrap gap-3">
         <button
           type="button"
@@ -123,15 +132,19 @@ function Controls({
         </button>
         <button
           type="button"
-          disabled={invalid || busy}
+          disabled={
+            invalid ||
+            busy ||
+            job.data?.status === "submission_uncertain"
+          }
           onClick={() => exportVideo.mutate()}
           className="rounded-full bg-accent px-6 py-3 text-white disabled:opacity-50"
         >
           {exportVideo.isPending
             ? "Preparing video…"
-            : quality === "hd"
+            : paidExportsEnabled && quality === "hd"
               ? "Export HD video"
-              : "Export free video"}
+              : "Export video"}
         </button>
         <Link href="/dashboard" className="px-4 py-3 underline">
           Your creations
@@ -147,6 +160,12 @@ function Controls({
         <div aria-live="polite">
           {job.data.status === "queued" && <p>Your video is queued.</p>}
           {job.data.status === "rendering" && <p>Rendering your video…</p>}
+          {job.data.status === "submission_uncertain" && (
+            <div role="status" className="space-y-1">
+              <p>We could not confirm this export. Do not retry; it is being recovered.</p>
+              <p className="text-xs opacity-75">Recovery reference: {job.data.id}</p>
+            </div>
+          )}
           {job.data.status === "failed" && (
             <p role="alert">{job.data.error} Use Export video to retry.</p>
           )}
@@ -172,7 +191,7 @@ function Controls({
           )}
         </div>
       )}
-      {!embed && (
+      {paidExportsEnabled && !embed && (
         <BillingPanel prepareDraft={prepareDraft} disabled={invalid || busy} />
       )}
     </section>

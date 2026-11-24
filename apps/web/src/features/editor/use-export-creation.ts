@@ -73,10 +73,12 @@ export function useExportCreation(
     queryKey: ["render", jobId],
     queryFn: () => api<RenderJob>(`/api/renders/${jobId}`),
     enabled: Boolean(jobId),
-    refetchInterval: (query) =>
-      ["ready", "failed"].includes(query.state.data?.status ?? "")
-        ? false
-        : Math.min(30000, 2000 * 2 ** query.state.fetchFailureCount),
+    refetchInterval: (query) => {
+      const status = query.state.data?.status ?? "";
+      if (status === "ready" || status === "failed") return false;
+      if (status === "submission_uncertain") return 5000;
+      return Math.min(30000, 2000 * 2 ** query.state.fetchFailureCount);
+    },
   });
   useEffect(() => {
     if (job.data?.status === "failed" || job.data?.status === "ready")

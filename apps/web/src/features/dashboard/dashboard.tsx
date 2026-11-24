@@ -78,6 +78,8 @@ function AuthenticatedDashboard() {
                     </a>
                   ) : job.status === "failed" ? (
                     job.error
+                  ) : job.status === "submission_uncertain" ? (
+                    `We could not confirm this export. Do not retry; it is being recovered. (Reference: ${job.id})`
                   ) : (
                     `Video ${job.status}`
                   )}

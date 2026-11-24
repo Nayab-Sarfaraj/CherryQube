@@ -50,6 +50,8 @@ export default function Editor({
   initial?: SavedInvitation;
   embed?: boolean;
 }) {
+  const aiWriterEnabled =
+    process.env.NEXT_PUBLIC_ENABLE_AI_WRITER === "true";
   const template = getTemplate(templateId)!;
   const [fields, setFields] = useState<VideoProps>(
     initial?.props ?? template.defaultProps,
@@ -323,7 +325,7 @@ export default function Editor({
                 {errors[key] && (
                   <p className="mt-1 text-sm text-red-800">{errors[key]}</p>
                 )}
-                {key === "message" && (
+                {key === "message" && aiWriterEnabled && (
                   <MessageWriter
                     context={
                       fields.type === "card"

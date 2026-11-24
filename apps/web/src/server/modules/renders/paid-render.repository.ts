@@ -72,7 +72,14 @@ export const paidRenderRepository = {
           {
             $set: { status: "queued" as const, chargeSequence: sequence },
             $addToSet: { invitationIds: invitationId },
-            $unset: { error: 1, startedAt: 1, attemptId: 1 },
+            $unset: {
+              error: 1,
+              startedAt: 1,
+              attemptId: 1,
+              lambdaRenderId: 1,
+              bucketName: 1,
+              progress: 1,
+            },
           },
           { session, returnDocument: "after" },
         ).lean();
@@ -133,13 +140,79 @@ export const paidRenderRepository = {
       );
     });
   },
-  async sweep() {
+  async failLambdaStart(id: string, attemptId: string, error?: string) {
+    await connectDb();
+    return billingTransaction(async (session) => {
+      const filter = {
+        _id: id,
+        tier: "hd" as const,
+        status: "submission_uncertain" as const,
+        attemptId,
+      };
+      const job = await Render.findOne(filter).session(session).lean();
+      if (!job) return { modifiedCount: 0 };
+      await refund(session, job);
+      return Render.updateOne(
+        filter,
+        {
+          $set: {
+            status: "failed",
+            error:
+              error ||
+              "The video could not be started. Your export credit was returned.",
+          },
+        },
+        { session },
+      );
+    });
+  },
+  async failLambda(
+    id: string,
+    lambdaRenderId: string,
+    error?: string,
+    expired = false,
+  ) {
+    await connectDb();
+    return billingTransaction(async (session) => {
+      const filter = {
+        _id: id,
+        tier: "hd" as const,
+        status: "rendering" as const,
+        lambdaRenderId,
+      };
+      const job = await Render.findOne(filter).session(session).lean();
+      if (!job) return { modifiedCount: 0 };
+      await refund(session, job);
+      return Render.updateOne(
+        filter,
+        {
+          $set: {
+            status: "failed",
+            error:
+              error ??
+              (expired
+                ? "Rendering timed out. Your export credit was returned."
+                : "The video could not be rendered. Your export credit was returned."),
+          },
+        },
+        { session },
+      );
+    });
+  },
+  async sweep(includeLambda = false) {
     await connectDb();
     const cutoff = new Date(Date.now() - 600000);
+    const renderingFilter = includeLambda
+      ? { status: "rendering" as const, startedAt: { $lt: cutoff } }
+      : {
+          status: "rendering" as const,
+          lambdaRenderId: { $exists: false },
+          startedAt: { $lt: cutoff },
+        };
     const jobs = await Render.find({
       tier: "hd" as const,
       $or: [
-        { status: "rendering" as const, startedAt: { $lt: cutoff } },
+        renderingFilter,
         { status: "queued" as const, updatedAt: { $lt: cutoff } },
       ],
     })

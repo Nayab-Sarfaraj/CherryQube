@@ -1,4 +1,4 @@
-import * as Clipboard from "expo-clipboard";
+import { copyToClipboard } from "@/lib/safe-clipboard";
 import { useState } from "react";
 import { Alert, Pressable, Share, StyleSheet, Text, View } from "react-native";
 import type { GuestItemDto } from "@greetings/shared";
@@ -15,7 +15,7 @@ export function GuestRow({ guest, onDelete, isDeleting }: GuestRowProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
-    await Clipboard.setStringAsync(guest.link);
+    await copyToClipboard(guest.link);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

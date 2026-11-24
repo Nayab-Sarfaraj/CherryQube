@@ -9,6 +9,7 @@ export function renderDto(
     | "fileUrl"
     | "posterUrl"
     | "error"
+    | "progress"
   > & { _id: unknown },
 ) {
   return {
@@ -20,5 +21,6 @@ export function renderDto(
     fileUrl: item.fileUrl,
     posterUrl: item.posterUrl,
     error: item.error,
+    progress: item.progress ?? (item.status === "ready" ? 100 : 0),
   };
 }

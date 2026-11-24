@@ -137,3 +137,35 @@ export function buildEditorPath(templateId: string, draftId?: string) {
     ? `/create/${templateId}?draft=${draftId}`
     : `/create/${templateId}`;
 }
+
+export function resolveMediaUrl(
+  url?: string | null,
+  origin = WEB_ORIGIN,
+): string | undefined {
+  if (!url) return undefined;
+  const trimmed = url.trim();
+  if (!trimmed) return undefined;
+
+  try {
+    const hasProtocol =
+      trimmed.startsWith("http://") || trimmed.startsWith("https://");
+    if (hasProtocol) {
+      const parsed = new URL(trimmed);
+      if (isLoopbackOrigin(parsed.hostname)) {
+        const target = new URL(origin);
+        parsed.protocol = target.protocol;
+        parsed.hostname = target.hostname;
+        parsed.port = target.port;
+        return parsed.toString();
+      }
+      return trimmed;
+    }
+    return new URL(
+      trimmed.startsWith("/") ? trimmed.slice(1) : trimmed,
+      origin.endsWith("/") ? origin : `${origin}/`,
+    ).toString();
+  } catch {
+    return trimmed;
+  }
+}
+
