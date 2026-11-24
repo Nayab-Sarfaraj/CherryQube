@@ -135,3 +135,7 @@ export function remotionLambdaConfig() {
     bucketName: (process.env.REMOTION_BUCKET_NAME || process.env.S3_BUCKET)!,
   };
 }
+
+export function cronSecret(): string | null {
+  return process.env.CRON_SECRET?.trim() || null;
+}

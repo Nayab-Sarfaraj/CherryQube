@@ -9,16 +9,24 @@ export interface RenderRecord {
   invitationId: string;
   invitationIds: string[];
   propsHash: string;
-  status: "queued" | "rendering" | "ready" | "failed";
+  status:
+    | "queued"
+    | "rendering"
+    | "ready"
+    | "failed"
+    | "submission_uncertain";
   input: InvitationInput;
   fileUrl?: string;
   posterUrl?: string;
   error?: string;
   lambdaRenderId?: string;
   bucketName?: string;
+  outputKey?: string;
+  posterKey?: string;
   progress?: number;
   attempts: number;
   attemptId?: string;
+  submittedAt?: Date;
   startedAt?: Date;
   completedAt?: Date;
   elapsedMs?: number;
@@ -36,7 +44,13 @@ const schema = new Schema<RenderRecord>(
     propsHash: { type: String, required: true },
     status: {
       type: String,
-      enum: ["queued", "rendering", "ready", "failed"],
+      enum: [
+        "queued",
+        "rendering",
+        "ready",
+        "failed",
+        "submission_uncertain",
+      ],
       default: "queued",
     },
     input: { type: Schema.Types.Mixed, required: true },
@@ -45,9 +59,12 @@ const schema = new Schema<RenderRecord>(
     error: String,
     lambdaRenderId: String,
     bucketName: String,
+    outputKey: String,
+    posterKey: String,
     progress: { type: Number, default: 0 },
     attempts: { type: Number, default: 0 },
     attemptId: String,
+    submittedAt: Date,
     startedAt: Date,
     completedAt: Date,
     elapsedMs: Number,

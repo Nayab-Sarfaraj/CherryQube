@@ -74,7 +74,9 @@ export function useExportCreation(
     queryFn: () => api<RenderJob>(`/api/renders/${jobId}`),
     enabled: Boolean(jobId),
     refetchInterval: (query) =>
-      ["ready", "failed"].includes(query.state.data?.status ?? "")
+      ["ready", "failed", "submission_uncertain"].includes(
+        query.state.data?.status ?? "",
+      )
         ? false
         : Math.min(30000, 2000 * 2 ** query.state.fetchFailureCount),
   });

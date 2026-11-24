@@ -95,13 +95,18 @@ export const renderRepository = {
    */
   async claimLambda(id: string) {
     await connectDb();
+    const attemptId = randomUUID();
+    const outputKey = `renders/${id}/${attemptId}.mp4`;
+    const posterKey = `posters/${id}/${attemptId}.png`;
     return Render.findOneAndUpdate(
       { _id: id, status: "queued" },
       {
         $set: {
-          status: "rendering",
-          startedAt: new Date(),
-          attemptId: randomUUID(),
+          status: "submission_uncertain",
+          submittedAt: new Date(),
+          attemptId,
+          outputKey,
+          posterKey,
           progress: 1,
         },
         $unset: { lambdaRenderId: 1, bucketName: 1, error: 1 },
@@ -167,19 +172,22 @@ export const renderRepository = {
       { returnDocument: "after" },
     ).lean();
   },
-  async sweep() {
+  async sweep(includeLambda = false) {
     await connectDb();
-    await paidRenderRepository.sweep();
+    await paidRenderRepository.sweep(includeLambda);
     const cutoff = new Date(Date.now() - 600000);
+    const renderingFilter = includeLambda
+      ? { status: "rendering" as const, startedAt: { $lt: cutoff } }
+      : {
+          status: "rendering" as const,
+          lambdaRenderId: { $exists: false },
+          startedAt: { $lt: cutoff },
+        };
     return Render.updateMany(
       {
         tier: { $ne: "hd" },
         $or: [
-          {
-            status: "rendering",
-            lambdaRenderId: { $exists: false },
-            startedAt: { $lt: cutoff },
-          },
+          renderingFilter,
           { status: "queued", updatedAt: { $lt: cutoff } },
         ],
       },
@@ -203,22 +211,81 @@ export const renderRepository = {
     attemptId: string,
     lambdaRenderId: string,
     bucketName: string,
+    outputKey?: string,
+    posterKey?: string,
   ) {
     await connectDb();
     return Render.findOneAndUpdate(
       {
         _id: id,
         attemptId,
-        status: "rendering",
-        lambdaRenderId: { $exists: false },
+        status: "submission_uncertain",
       },
       {
         $set: {
           status: "rendering",
           lambdaRenderId,
           bucketName,
+          ...(outputKey ? { outputKey } : {}),
+          ...(posterKey ? { posterKey } : {}),
           startedAt: new Date(),
           progress: 5,
+        },
+      },
+      { returnDocument: "after" },
+    ).lean();
+  },
+  async recordUncertainRecoveryData(
+    id: string,
+    attemptId: string,
+    lambdaRenderId: string,
+    bucketName: string,
+  ) {
+    await connectDb();
+    return Render.findOneAndUpdate(
+      {
+        _id: id,
+        attemptId,
+        status: "submission_uncertain",
+      },
+      {
+        $set: {
+          lambdaRenderId,
+          bucketName,
+        },
+      },
+      { returnDocument: "after" },
+    ).lean();
+  },
+  async findUncertainJobs(limit = 10) {
+    await connectDb();
+    return Render.find({
+      status: "submission_uncertain",
+      outputKey: { $exists: true },
+    })
+      .limit(limit)
+      .lean();
+  },
+  async recoverUncertainJob(
+    id: string,
+    attemptId: string,
+    fileUrl: string,
+    posterUrl?: string,
+  ) {
+    await connectDb();
+    return Render.findOneAndUpdate(
+      {
+        _id: id,
+        attemptId,
+        status: "submission_uncertain",
+      },
+      {
+        $set: {
+          status: "ready",
+          fileUrl,
+          ...(posterUrl ? { posterUrl } : {}),
+          progress: 100,
+          completedAt: new Date(),
         },
       },
       { returnDocument: "after" },
@@ -277,20 +344,22 @@ export const renderRepository = {
       { returnDocument: "after" },
     ).lean();
   },
-  async findExpiredLambdaRenders(cutoff: Date) {
+  async findExpiredLambdaRenders(cutoff: Date, limit = 10) {
     await connectDb();
     return Render.find({
       status: "rendering",
       lambdaRenderId: { $exists: true },
       startedAt: { $lt: cutoff },
-    }).lean();
+    })
+      .limit(limit)
+      .lean();
   },
   async failLambdaStart(id: string, attemptId: string, error: string) {
     await connectDb();
     const job = await Render.findOne({
       _id: id,
       attemptId,
-      status: "rendering",
+      status: "submission_uncertain",
     })
       .select("tier")
       .lean();
@@ -302,8 +371,7 @@ export const renderRepository = {
       {
         _id: id,
         attemptId,
-        status: "rendering",
-        lambdaRenderId: { $exists: false },
+        status: "submission_uncertain",
       },
       { $set: { status: "failed", error } },
       { returnDocument: "after" },

@@ -120,7 +120,12 @@ export const paidRenderRepository = {
         : {
             _id: id,
             tier: "hd" as const,
-            status: "rendering" as const,
+            status: {
+              $in: [
+                "submission_uncertain" as const,
+                "rendering" as const,
+              ],
+            },
             attemptId,
           };
       const job = await Render.findOne(filter).session(session).lean();
@@ -173,17 +178,20 @@ export const paidRenderRepository = {
       );
     });
   },
-  async sweep() {
+  async sweep(includeLambda = false) {
     await connectDb();
     const cutoff = new Date(Date.now() - 600000);
-    const jobs = await Render.find({
-      tier: "hd" as const,
-      $or: [
-        {
+    const renderingFilter = includeLambda
+      ? { status: "rendering" as const, startedAt: { $lt: cutoff } }
+      : {
           status: "rendering" as const,
           lambdaRenderId: { $exists: false },
           startedAt: { $lt: cutoff },
-        },
+        };
+    const jobs = await Render.find({
+      tier: "hd" as const,
+      $or: [
+        renderingFilter,
         { status: "queued" as const, updatedAt: { $lt: cutoff } },
       ],
     })

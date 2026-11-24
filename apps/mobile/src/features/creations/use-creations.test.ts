@@ -64,9 +64,10 @@ describe("render detail polling rules", () => {
     expect(shouldPollRender(false, false, "queued")).toBe(false);
   });
 
-  it("stops polling on terminal status ready or failed", () => {
+  it("stops polling on terminal status ready, failed, or submission_uncertain", () => {
     expect(shouldPollRender(true, true, "ready")).toBe(false);
     expect(shouldPollRender(true, true, "failed")).toBe(false);
+    expect(shouldPollRender(true, true, "submission_uncertain")).toBe(false);
   });
 
   it("polls every 2000ms when in progress, focused, and foregrounded", () => {

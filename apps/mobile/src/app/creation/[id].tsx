@@ -19,6 +19,7 @@ import {
 } from "@/features/creations/use-creations";
 import { FloralSprig } from "@/components/ui/floral-sprig";
 import { PillBadge, type PillBadgeVariant } from "@/components/ui/pill-badge";
+import { getCreationStatusBadge } from "@/features/creations/status";
 import { PrimaryButton } from "@/components/ui/primary-button";
 import { useScreenActivity } from "@/hooks/use-screen-activity";
 import { resolveMediaUrl, WEB_ORIGIN } from "@/lib/mobile-config";
@@ -120,18 +121,8 @@ export default function CreationDetailRoute() {
   const typeLabel = creation?.type === "card" ? "Card" : "Invitation";
   const isInvitation = creation?.type === "invitation";
 
-  let statusVariant: PillBadgeVariant = "draft";
-  let statusText = "Draft";
-  if (currentStatus === "queued" || currentStatus === "rendering") {
-    statusVariant = "rendering";
-    statusText = "Rendering";
-  } else if (currentStatus === "ready") {
-    statusVariant = "ready";
-    statusText = "Ready";
-  } else if (currentStatus === "failed") {
-    statusVariant = "failed";
-    statusText = "Failed";
-  }
+  const { variant: statusVariant, label: statusText } =
+    getCreationStatusBadge(currentStatus);
 
   if (isCreationLoading && !creation) {
     return (
@@ -333,7 +324,23 @@ export default function CreationDetailRoute() {
           </View>
         )}
 
-        {/* 4. Draft state */}
+        {/* 4. Submission uncertain / recovery state */}
+        {currentStatus === "submission_uncertain" && (
+          <View style={[styles.stateCard, mobileTheme.shadows.card]}>
+            <Text style={styles.stateTitle}>Submission being recovered</Text>
+            <Text style={styles.stateCopy}>
+              We could not confirm this export. Do not retry; it is being
+              recovered.
+            </Text>
+            {(activeRenderId || renderJob?.id) && (
+              <Text style={styles.recoveryReference}>
+                Reference: {renderJob?.id || activeRenderId}
+              </Text>
+            )}
+          </View>
+        )}
+
+        {/* 5. Draft state */}
         {currentStatus === "draft" && (
           <View style={[styles.stateCard, mobileTheme.shadows.card]}>
             <FloralSprig size={32} style={{ marginBottom: 10 }} />
@@ -469,6 +476,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 21,
     marginBottom: 16,
+    textAlign: "center",
+  },
+  recoveryReference: {
+    color: mobileTheme.colors.quietInk,
+    fontFamily: "Figtree_500Medium",
+    fontSize: 12,
+    marginTop: 4,
     textAlign: "center",
   },
   videoWrapper: {

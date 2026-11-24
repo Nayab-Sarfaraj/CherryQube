@@ -45,6 +45,26 @@ const defaultDependencies = {
 export function createRenderService(deps: typeof defaultDependencies) {
   type RenderJob = NonNullable<Awaited<ReturnType<typeof deps.renders.get>>>;
 
+  async function pMap<T, R>(
+    items: T[],
+    fn: (item: T) => Promise<R>,
+    concurrency = 3,
+  ): Promise<R[]> {
+    const results: R[] = new Array(items.length);
+    let index = 0;
+    const workers = Array.from(
+      { length: Math.min(concurrency, items.length) },
+      async () => {
+        while (index < items.length) {
+          const currentIndex = index++;
+          results[currentIndex] = await fn(items[currentIndex]);
+        }
+      },
+    );
+    await Promise.all(workers);
+    return results;
+  }
+
   async function dispatchToLambda(
     owner: string,
     job: RenderJob,
@@ -55,24 +75,113 @@ export function createRenderService(deps: typeof defaultDependencies) {
     const claimed = await deps.renders.claimLambda(id);
     if (!claimed) return (await deps.renders.get(owner, id)) ?? job;
 
+    let submitted: { renderId: string; bucketName: string } | undefined;
     try {
       const lambda = deps.getLambdaClient();
-      const { renderId, bucketName } = await lambda.renderMedia(
+      if (lambda.renderStill && claimed.posterKey) {
+        try {
+          await lambda.renderStill(
+            invitationInput.parse(claimed.input),
+            claimed.posterKey,
+          );
+        } catch (posterErr) {
+          log("warn", "render.lambda.poster-start-failed", {
+            id,
+            error:
+              posterErr instanceof Error
+                ? posterErr.message
+                : String(posterErr),
+          });
+        }
+      }
+      submitted = await lambda.renderMedia(
         invitationInput.parse(claimed.input),
         claimed.tier,
+        claimed.outputKey,
       );
       const updated = await deps.renders.updateLambdaJob(
         id,
         claimed.attemptId!,
-        renderId,
-        bucketName,
+        submitted.renderId,
+        submitted.bucketName,
+        claimed.outputKey,
+        claimed.posterKey,
       );
-      return updated ?? (await deps.renders.get(owner, id)) ?? claimed;
+      if (!updated) {
+        throw new Error("Failed to persist Lambda render identifiers");
+      }
+      return updated;
     } catch (error) {
       log("error", "render.lambda.start-failed", {
         id,
         error: error instanceof Error ? error.message : String(error),
       });
+      if (submitted) {
+        let cancelled = false;
+        try {
+          const lambda = deps.getLambdaClient();
+          if (lambda.cancelRender) {
+            await lambda.cancelRender(
+              submitted.renderId,
+              submitted.bucketName,
+            );
+            cancelled = true;
+          }
+        } catch (cancelError) {
+          log("error", "render.lambda.cancel-failed", {
+            id,
+            error:
+              cancelError instanceof Error
+                ? cancelError.message
+                : String(cancelError),
+          });
+        }
+        if (cancelled) {
+          return (
+            (await deps.renders.failLambdaStart(
+              id,
+              claimed.attemptId!,
+              "The video could not be started. Try exporting again.",
+            )) ??
+            (await deps.renders.get(owner, id)) ??
+            claimed
+          );
+        }
+
+        log("warn", "render.lambda.submission-uncertain", {
+          id,
+          attemptId: claimed.attemptId ?? "",
+          submittedAt: claimed.submittedAt?.toISOString() ?? "",
+          outputKey: claimed.outputKey ?? "",
+          lambdaRenderId: submitted.renderId,
+          bucketName: submitted.bucketName,
+        });
+
+        try {
+          await deps.renders.recordUncertainRecoveryData?.(
+            id,
+            claimed.attemptId!,
+            submitted.renderId,
+            submitted.bucketName,
+          );
+        } catch (persistError) {
+          log("error", "render.lambda.record-uncertain-failed", {
+            id,
+            error:
+              persistError instanceof Error
+                ? persistError.message
+                : String(persistError),
+          });
+        }
+
+        const current = (await deps.renders.get(owner, id)) ?? claimed;
+        return {
+          ...current,
+          status: "submission_uncertain",
+          error:
+            "We could not confirm this export. Do not retry; it is being recovered.",
+        };
+      }
       return (
         (await deps.renders.failLambdaStart(
           id,
@@ -85,16 +194,93 @@ export function createRenderService(deps: typeof defaultDependencies) {
     }
   }
 
+  async function reconcileUncertainJob(job: RenderJob): Promise<RenderJob> {
+    if (
+      job.status !== "submission_uncertain" ||
+      !job.outputKey ||
+      !job.attemptId
+    ) {
+      return job;
+    }
+
+    const id = String(job._id);
+    const attemptId = job.attemptId;
+    const outputKey = job.outputKey;
+    const posterKey = job.posterKey ?? `posters/${id}/${attemptId}.png`;
+
+    try {
+      const lambda = deps.getLambdaClient();
+      const outputCheck = await lambda.checkOutputExists?.(
+        outputKey,
+        job.bucketName,
+      );
+      const posterCheck = await lambda.checkOutputExists?.(
+        posterKey,
+        job.bucketName,
+      );
+
+      if (
+        outputCheck?.exists &&
+        outputCheck.url &&
+        posterCheck?.exists &&
+        posterCheck.url
+      ) {
+        const recovered = await deps.renders.recoverUncertainJob?.(
+          id,
+          attemptId,
+          outputCheck.url,
+          posterCheck.url,
+        );
+        if (recovered) {
+          log("info", "render.uncertain.recovered", {
+            id,
+            attemptId,
+            outputKey,
+            posterKey,
+          });
+          await publishResults(job.ownerClerkId, id).catch(() =>
+            log("error", "render.publication-deferred", { renderId: id }),
+          );
+          return recovered;
+        }
+      }
+    } catch (checkError) {
+      log("error", "render.uncertain.check-failed", {
+        id,
+        attemptId,
+        error:
+          checkError instanceof Error ? checkError.message : String(checkError),
+      });
+    }
+
+    const submittedAt =
+      job.submittedAt || job.startedAt || (job as { createdAt?: Date }).createdAt;
+    const isPastBuffer =
+      submittedAt &&
+      Date.now() - new Date(submittedAt).getTime() >= 600000;
+
+    if (isPastBuffer) {
+      log("warn", "render.uncertain.blocked", {
+        id,
+        attemptId,
+        outputKey,
+        message:
+          "Render output not found after timeout buffer. Awaiting explicit operator recovery.",
+      });
+    }
+
+    return job;
+  }
+
   async function reconcileLambda(
     owner: string,
     item: RenderJob,
   ): Promise<RenderJob> {
-    if (
-      !item ||
-      item.status !== "rendering" ||
-      !item.lambdaRenderId ||
-      !deps.isLambdaEnabled?.()
-    )
+    if (!item) return item;
+    if (item.status === "submission_uncertain") {
+      return reconcileUncertainJob(item);
+    }
+    if (item.status !== "rendering" || !item.lambdaRenderId)
       return item;
 
     const id = String(item._id);
@@ -102,6 +288,22 @@ export function createRenderService(deps: typeof defaultDependencies) {
     const isTimedOut =
       item.startedAt &&
       Date.now() - new Date(item.startedAt).getTime() >= 600000;
+
+    if (!deps.isLambdaEnabled?.()) {
+      if (isTimedOut) {
+        return (
+          (await deps.renders.failLambda(
+            id,
+            lambdaRenderId,
+            item.tier === "hd"
+              ? "Rendering timed out. Your export credit was returned."
+              : "Rendering timed out. Try exporting again.",
+          )) ?? item
+        );
+      }
+      return item;
+    }
+
     try {
       const lambda = deps.getLambdaClient();
       const progress = await lambda.getProgress(
@@ -109,10 +311,22 @@ export function createRenderService(deps: typeof defaultDependencies) {
         item.bucketName ?? undefined,
       );
       if (progress.done && progress.fileUrl) {
+        let posterUrl = item.posterUrl;
+        if (!posterUrl && lambda.renderStill) {
+          try {
+            posterUrl = await lambda.renderStill(
+              invitationInput.parse(item.input),
+              item.posterKey,
+            );
+          } catch {
+            // ignore
+          }
+        }
         const updated = await deps.renders.completeLambda(
           id,
           lambdaRenderId,
           progress.fileUrl,
+          ...(posterUrl ? [posterUrl] : []),
         );
         if (updated) {
           await publishResults(owner, id).catch(() =>
@@ -167,17 +381,42 @@ export function createRenderService(deps: typeof defaultDependencies) {
     }
   }
 
+  let inFlightSweep: Promise<void> | null = null;
+
   async function sweep() {
-    if (deps.isLambdaEnabled?.()) {
-      const cutoff = new Date(Date.now() - 600000);
-      const expiredLambda = await deps.renders.findExpiredLambdaRenders?.(cutoff);
-      if (expiredLambda?.length) {
-        await Promise.all(
-          expiredLambda.map((job) => reconcileLambda(job.ownerClerkId, job)),
-        );
+    if (inFlightSweep) return inFlightSweep;
+
+    inFlightSweep = (async () => {
+      try {
+        const lambdaEnabled = Boolean(deps.isLambdaEnabled?.());
+        if (lambdaEnabled) {
+          const cutoff = new Date(Date.now() - 600000);
+          const expiredLambda =
+            await deps.renders.findExpiredLambdaRenders?.(cutoff, 10);
+          if (expiredLambda?.length) {
+            await pMap(
+              expiredLambda,
+              (job) => reconcileLambda(job.ownerClerkId, job),
+              3,
+            );
+          }
+
+          const uncertainJobs = await deps.renders.findUncertainJobs?.(10);
+          if (uncertainJobs?.length) {
+            await pMap(
+              uncertainJobs,
+              (job) => reconcileUncertainJob(job),
+              3,
+            );
+          }
+        }
+        await deps.renders.sweep(!lambdaEnabled);
+      } finally {
+        inFlightSweep = null;
       }
-    }
-    await deps.renders.sweep();
+    })();
+
+    return inFlightSweep;
   }
 
   return {
@@ -284,10 +523,6 @@ export function createRenderService(deps: typeof defaultDependencies) {
       if (!item) throw new NotFoundError();
 
       item = await reconcileLambda(owner, item);
-      await sweep();
-      if (item.status === "rendering" || item.status === "queued") {
-        item = (await deps.renders.get(owner, id)) ?? item;
-      }
 
       if (item.status === "ready") {
         await publishResults(owner, id).catch(() =>
@@ -320,8 +555,16 @@ export function createRenderService(deps: typeof defaultDependencies) {
     },
     async list(owner: string) {
       const items = await deps.renders.list(owner);
-      await Promise.all(items.map((item) => reconcileLambda(owner, item)));
-      await sweep();
+      const activeLambda = items.filter(
+        (it) => it.status === "rendering" && it.lambdaRenderId,
+      );
+      if (activeLambda.length > 0) {
+        await pMap(
+          activeLambda,
+          (item) => reconcileLambda(owner, item),
+          3,
+        );
+      }
       return deps.renders.list(owner);
     },
     sweep,

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { createRenderService, canonical } from "./render.service";
+import { createResultService } from "../results/result.service";
 import { NotFoundError } from "../../lib/errors";
 import { InsufficientBalance } from "../entitlements/entitlement.repository";
 import { renderChoice } from "./render.schema";
@@ -399,5 +400,506 @@ describe("render safeguards", () => {
     );
     expect(renders.failLambda).not.toHaveBeenCalled();
     expect(result.status).toBe("ready");
+  });
+
+  it("times out and refunds a Lambda record when Lambda is disabled", async () => {
+    const id = "e".repeat(24);
+    const tenMinutesAgo = new Date(Date.now() - 650000);
+    const record = {
+      _id: id,
+      invitationId: "b".repeat(24),
+      status: "rendering" as const,
+      lambdaRenderId: "lambda-disabled",
+      bucketName: "bucket",
+      attempts: 1,
+      tier: "hd" as const,
+      startedAt: tenMinutesAgo,
+      input: {
+        templateId: "harvest-card",
+        props: templates[0].defaultProps,
+      },
+    };
+    const renders = {
+      get: vi.fn().mockResolvedValue(record),
+      sweep: vi.fn(),
+      failLambda: vi.fn().mockResolvedValue({
+        ...record,
+        status: "failed" as const,
+        error: "Rendering timed out. Your export credit was returned.",
+      }),
+      completeLambda: vi.fn(),
+      updateProgress: vi.fn(),
+    };
+    const deps = {
+      invitations: { get: vi.fn() },
+      renders,
+      limit: vi.fn(),
+      checkPhoto: vi.fn(),
+      bindResult: vi.fn(),
+      reserveHd: vi.fn(),
+      environment: () => "sandbox" as const,
+      isLambdaEnabled: () => false,
+      getLambdaClient: vi.fn(),
+    };
+    const service = createRenderService(
+      deps as unknown as Parameters<typeof createRenderService>[0],
+    );
+
+    const result = await service.get("owner", id);
+    expect(renders.failLambda).toHaveBeenCalledWith(
+      id,
+      "lambda-disabled",
+      "Rendering timed out. Your export credit was returned.",
+    );
+    expect(result.status).toBe("failed");
+  });
+
+  it("cancels remote render if updateLambdaJob fails after submission", async () => {
+    const id = "f".repeat(24);
+    const cancelRender = vi.fn().mockResolvedValue(undefined);
+    const renders = {
+      attach: vi.fn(),
+      find: vi.fn().mockResolvedValue(null),
+      enqueue: vi.fn().mockResolvedValue({
+        _id: id,
+        invitationId: "b".repeat(24),
+        status: "queued" as const,
+        tier: "free" as const,
+        input: {
+          templateId: "harvest-card",
+          props: templates[0].defaultProps,
+        },
+      }),
+      claimLambda: vi.fn().mockResolvedValue({
+        _id: id,
+        attemptId: "att-1",
+        tier: "free" as const,
+        input: {
+          templateId: "harvest-card",
+          props: templates[0].defaultProps,
+        },
+      }),
+      updateLambdaJob: vi.fn().mockResolvedValue(null), // persistence fails!
+      failLambdaStart: vi.fn().mockResolvedValue({
+        _id: id,
+        status: "failed" as const,
+      }),
+      get: vi.fn(),
+      sweep: vi.fn(),
+    };
+    const deps = {
+      invitations: {
+        get: vi.fn().mockResolvedValue({
+          templateId: "harvest-card",
+          props: templates[0].defaultProps,
+        }),
+      },
+      renders,
+      limit: vi.fn(),
+      checkPhoto: vi.fn(),
+      bindResult: vi.fn(),
+      reserveHd: vi.fn(),
+      environment: () => "sandbox" as const,
+      isLambdaEnabled: () => true,
+      getLambdaClient: () => ({
+        renderMedia: vi.fn().mockResolvedValue({
+          renderId: "remote-render-123",
+          bucketName: "remote-bucket",
+        }),
+        getProgress: vi.fn(),
+        cancelRender,
+      }),
+    };
+    const service = createRenderService(
+      deps as unknown as Parameters<typeof createRenderService>[0],
+    );
+
+    const result = await service.request("owner", "inv-1");
+    expect(cancelRender).toHaveBeenCalledWith(
+      "remote-render-123",
+      "remote-bucket",
+    );
+    expect(renders.failLambdaStart).toHaveBeenCalledWith(
+      id,
+      "att-1",
+      "The video could not be started. Try exporting again.",
+    );
+    expect(result.status).toBe("failed");
+  });
+
+  it("if cancellation fails after submission, preserves Lambda identifiers in submission_uncertain status and blocks fresh retry", async () => {
+    const id = "a".repeat(24);
+    const cancelRender = vi.fn().mockRejectedValue(new Error("AWS timeout"));
+    const recordUncertainRecoveryData = vi.fn().mockResolvedValue({
+      _id: id,
+      attemptId: "att-1",
+      lambdaRenderId: "remote-render-123",
+      bucketName: "remote-bucket",
+      status: "submission_uncertain" as "submission_uncertain" | "ready",
+      progress: 5,
+    });
+    const renders = {
+      attach: vi.fn(),
+      find: vi.fn().mockResolvedValue(null),
+      enqueue: vi.fn().mockResolvedValue({
+        _id: id,
+        invitationId: "b".repeat(24),
+        status: "queued" as const,
+        tier: "free" as const,
+        input: {
+          templateId: "harvest-card",
+          props: templates[0].defaultProps,
+        },
+      }),
+      claimLambda: vi.fn().mockResolvedValue({
+        _id: id,
+        attemptId: "att-1",
+        tier: "free" as const,
+        input: {
+          templateId: "harvest-card",
+          props: templates[0].defaultProps,
+        },
+      }),
+      updateLambdaJob: vi.fn().mockResolvedValue(null), // persistence fails!
+      recordUncertainRecoveryData,
+      failLambdaStart: vi.fn(),
+      get: vi.fn().mockResolvedValue({
+        _id: id,
+        lambdaRenderId: "remote-render-123",
+        bucketName: "remote-bucket",
+        status: "submission_uncertain" as "submission_uncertain" | "ready",
+      }),
+      sweep: vi.fn(),
+    };
+    const deps = {
+      invitations: {
+        get: vi.fn().mockResolvedValue({
+          templateId: "harvest-card",
+          props: templates[0].defaultProps,
+        }),
+      },
+      renders,
+      limit: vi.fn(),
+      checkPhoto: vi.fn(),
+      bindResult: vi.fn(),
+      reserveHd: vi.fn(),
+      environment: () => "sandbox" as const,
+      isLambdaEnabled: () => true,
+      getLambdaClient: () => ({
+        renderMedia: vi.fn().mockResolvedValue({
+          renderId: "remote-render-123",
+          bucketName: "remote-bucket",
+        }),
+        getProgress: vi.fn(),
+        cancelRender,
+      }),
+    };
+    const service = createRenderService(
+      deps as unknown as Parameters<typeof createRenderService>[0],
+    );
+
+    const result = await service.request("owner", "inv-1");
+    expect(cancelRender).toHaveBeenCalledWith(
+      "remote-render-123",
+      "remote-bucket",
+    );
+    expect(recordUncertainRecoveryData).toHaveBeenCalledWith(
+      id,
+      "att-1",
+      "remote-render-123",
+      "remote-bucket",
+    );
+    expect(renders.failLambdaStart).not.toHaveBeenCalled();
+    expect(result.status).toBe("submission_uncertain");
+
+    // Retry must be blocked while status is not failed
+    const retryResult = await service.retry("owner", id);
+    expect(retryResult.status).toBe("submission_uncertain");
+  });
+
+  it("renderMedia succeeds → updateLambdaJob fails → cancelRender fails → recordPendingLambdaSubmission fails → retry is rejected and no second Lambda submission occurs", async () => {
+    const id = "a".repeat(24);
+    const cancelRender = vi.fn().mockRejectedValue(new Error("AWS timeout"));
+    const renderMedia = vi.fn().mockResolvedValue({
+      renderId: "remote-render-123",
+      bucketName: "remote-bucket",
+    });
+    let dbStatus:
+      | "queued"
+      | "submission_uncertain"
+      | "rendering"
+      | "failed" = "queued";
+    let attempts = 0;
+
+    const renders = {
+      attach: vi.fn(),
+      find: vi.fn().mockImplementation(() =>
+        Promise.resolve({
+          _id: id,
+          status: dbStatus,
+          propsHash: "hash-1",
+        }),
+      ),
+      enqueue: vi.fn().mockResolvedValue({
+        _id: id,
+        invitationId: "b".repeat(24),
+        status: "queued" as const,
+        tier: "free" as const,
+        input: {
+          templateId: "harvest-card",
+          props: templates[0].defaultProps,
+        },
+      }),
+      claimLambda: vi.fn().mockImplementation(() => {
+        dbStatus = "submission_uncertain";
+        attempts++;
+        return Promise.resolve({
+          _id: id,
+          attemptId: "att-1",
+          status: "submission_uncertain" as "submission_uncertain" | "ready",
+          tier: "free" as const,
+          attempts,
+          input: {
+            templateId: "harvest-card",
+            props: templates[0].defaultProps,
+          },
+        });
+      }),
+      updateLambdaJob: vi
+        .fn()
+        .mockRejectedValue(new Error("Mongo connection timeout")),
+      recordUncertainRecoveryData: vi
+        .fn()
+        .mockRejectedValue(new Error("Mongo secondary failure")),
+      failLambdaStart: vi.fn(),
+      get: vi.fn().mockImplementation(() =>
+        Promise.resolve({
+          _id: id,
+          status: dbStatus,
+          tier: "free" as const,
+          attempts,
+        }),
+      ),
+      retryById: vi.fn(),
+      sweep: vi.fn(),
+    };
+
+    const deps = {
+      invitations: {
+        get: vi.fn().mockResolvedValue({
+          templateId: "harvest-card",
+          props: templates[0].defaultProps,
+        }),
+      },
+      renders,
+      limit: vi.fn(),
+      checkPhoto: vi.fn(),
+      bindResult: vi.fn(),
+      reserveHd: vi.fn(),
+      environment: () => "sandbox" as const,
+      isLambdaEnabled: () => true,
+      getLambdaClient: () => ({
+        renderMedia,
+        getProgress: vi.fn(),
+        cancelRender,
+      }),
+    };
+    const service = createRenderService(
+      deps as unknown as Parameters<typeof createRenderService>[0],
+    );
+
+    // Initial request: renderMedia succeeds, updateLambdaJob fails, cancelRender fails, recordPendingLambdaSubmission fails
+    const result = await service.request("owner", "inv-1");
+
+    expect(renderMedia).toHaveBeenCalledTimes(1);
+    expect(cancelRender).toHaveBeenCalledWith(
+      "remote-render-123",
+      "remote-bucket",
+    );
+    expect(renders.recordUncertainRecoveryData).toHaveBeenCalledWith(
+      id,
+      "att-1",
+      "remote-render-123",
+      "remote-bucket",
+    );
+    expect(renders.failLambdaStart).not.toHaveBeenCalled();
+    expect(result.status).toBe("submission_uncertain");
+    expect(dbStatus).toBe("submission_uncertain");
+
+    // Retry must be rejected and must NOT call renderMedia a second time
+    const retryResult = await service.retry("owner", id);
+    expect(retryResult.status).toBe("submission_uncertain");
+    expect(renders.retryById).not.toHaveBeenCalled();
+    expect(renderMedia).toHaveBeenCalledTimes(1);
+
+    // Repeated requestRender returns existing record and must NOT submit to Lambda again
+    const repeatedRequest = await service.request("owner", "inv-1");
+    expect(repeatedRequest.status).toBe("submission_uncertain");
+    expect(renderMedia).toHaveBeenCalledTimes(1);
+  });
+
+  it("coalesces global sweep and does not run global sweep on get", async () => {
+    const sweepFn = vi.fn().mockResolvedValue(undefined);
+    const findExpiredLambdaRenders = vi
+      .fn()
+      .mockResolvedValue([]);
+    const renders = {
+      get: vi.fn().mockResolvedValue({
+        _id: "1".repeat(24),
+        status: "ready" as const,
+      }),
+      sweep: sweepFn,
+      findExpiredLambdaRenders,
+    };
+    const deps = {
+      invitations: { get: vi.fn() },
+      renders,
+      limit: vi.fn(),
+      checkPhoto: vi.fn(),
+      bindResult: vi.fn(),
+      reserveHd: vi.fn(),
+      environment: () => "sandbox" as const,
+      isLambdaEnabled: () => true,
+      getLambdaClient: vi.fn(),
+    };
+    const service = createRenderService(
+      deps as unknown as Parameters<typeof createRenderService>[0],
+    );
+
+    // get() does not call global sweep
+    await service.get("owner", "1".repeat(24));
+    expect(sweepFn).not.toHaveBeenCalled();
+    expect(findExpiredLambdaRenders).not.toHaveBeenCalled();
+
+    // Calling sweep concurrently coalesces
+    await Promise.all([service.sweep(), service.sweep()]);
+    expect(sweepFn).toHaveBeenCalledTimes(1);
+    expect(findExpiredLambdaRenders).toHaveBeenCalledTimes(1);
+  });
+
+  it("recovers poster with uncertain render and allows public result to display video and poster", async () => {
+    const id = "f".repeat(24);
+    const attemptId = "attempt-recovery-123";
+    const outputKey = `renders/${id}/${attemptId}.mp4`;
+    const posterKey = `posters/${id}/${attemptId}.png`;
+
+    let record = {
+      _id: id,
+      invitationId: "b".repeat(24),
+      ownerClerkId: "owner",
+      status: "submission_uncertain" as "submission_uncertain" | "ready",
+      attemptId,
+      outputKey,
+      posterKey,
+      attempts: 1,
+      tier: "free" as const,
+      input: {
+        templateId: "harvest-card",
+        props: {
+          ...templates[0].defaultProps,
+          type: "card" as const,
+          senderName: "Nayab",
+          themeId: "thanksgiving",
+        },
+      },
+      fileUrl: undefined as string | undefined,
+      posterUrl: undefined as string | undefined,
+    };
+
+    let posterExists = false;
+    const checkOutputExists = vi.fn(async (key: string) => {
+      if (key === outputKey) {
+        return { exists: true, url: "https://media.test/video.mp4" };
+      }
+      if (key === posterKey) {
+        return posterExists
+          ? { exists: true, url: "https://media.test/poster.png" }
+          : { exists: false };
+      }
+      return { exists: false };
+    });
+
+    const renders = {
+      get: vi.fn().mockImplementation(async () => ({ ...record })),
+      sweep: vi.fn().mockResolvedValue(undefined),
+      findUncertainJobs: vi.fn().mockImplementation(async () => [record]),
+      recoverUncertainJob: vi.fn(
+        async (
+          jobId: string,
+          attId: string,
+          fileUrl: string,
+          posterUrl?: string,
+        ) => {
+          if (
+            jobId === id &&
+            attId === attemptId &&
+            record.status === "submission_uncertain"
+          ) {
+            record = {
+              ...record,
+              status: "ready" as const,
+              fileUrl,
+              posterUrl,
+            };
+            return { ...record };
+          }
+          return null;
+        },
+      ),
+    };
+
+    const deps = {
+      invitations: { get: vi.fn() },
+      renders,
+      limit: vi.fn(),
+      checkPhoto: vi.fn(),
+      bindResult: vi.fn(),
+      reserveHd: vi.fn(),
+      environment: () => "sandbox" as const,
+      isLambdaEnabled: () => true,
+      getLambdaClient: () => ({
+        renderMedia: vi.fn(),
+        getProgress: vi.fn(),
+        checkOutputExists,
+      }),
+    };
+
+    const service = createRenderService(
+      deps as unknown as Parameters<typeof createRenderService>[0],
+    );
+
+    // 1. When poster does not exist yet in S3, recovery does NOT mark ready
+    await service.sweep();
+    expect(renders.recoverUncertainJob).not.toHaveBeenCalled();
+    expect(record.status).toBe("submission_uncertain");
+
+    // 2. When poster exists too, recovery marks ready and saves both URLs
+    posterExists = true;
+    await service.sweep();
+    expect(renders.recoverUncertainJob).toHaveBeenCalledWith(
+      id,
+      attemptId,
+      "https://media.test/video.mp4",
+      "https://media.test/poster.png",
+    );
+    expect(record.status).toBe("ready");
+    expect(record.fileUrl).toBe("https://media.test/video.mp4");
+    expect(record.posterUrl).toBe("https://media.test/poster.png");
+
+    // 3. Public result lookup requires both videoUrl and posterUrl to display the video
+    const mockResultRepo = {
+      find: vi.fn().mockResolvedValue({
+        shareId: "share-token-1234567890",
+        render: record,
+      }),
+    };
+    const resultService = createResultService(
+      mockResultRepo as unknown as Parameters<typeof createResultService>[0],
+    );
+    const publicResult = await resultService.get("share-token-1234567890");
+
+    expect(publicResult.status).toBe("ready");
+    expect(publicResult.videoUrl).toBe("https://media.test/video.mp4");
+    expect(publicResult.posterUrl).toBe("https://media.test/poster.png");
   });
 });

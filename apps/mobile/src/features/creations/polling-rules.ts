@@ -16,7 +16,12 @@ export function shouldPollRender(
   status?: string,
 ): number | false {
   if (!isFocused || !isForeground || !status) return false;
-  if (status === "ready" || status === "failed") return false;
+  if (
+    status === "ready" ||
+    status === "failed" ||
+    status === "submission_uncertain"
+  )
+    return false;
   return 2000;
 }
 

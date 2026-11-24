@@ -2,6 +2,8 @@ import {
   renderMediaOnLambda,
   renderStillOnLambda,
   getRenderProgress as getLambdaProgress,
+  cancelRenderOnLambda,
+  presignUrl,
   type AwsRegion,
 } from "@remotion/lambda/client";
 import type { InvitationInput } from "../modules/invitations/invitation.schema";
@@ -19,12 +21,18 @@ export interface LambdaRenderClient {
   renderMedia(
     input: InvitationInput,
     tier?: RenderTier,
+    outputKey?: string,
   ): Promise<{ renderId: string; bucketName: string }>;
-  renderStill(input: InvitationInput): Promise<string>;
+  renderStill(input: InvitationInput, posterKey?: string): Promise<string>;
   getProgress(
     renderId: string,
     bucketName?: string,
   ): Promise<LambdaRenderProgress>;
+  cancelRender?(renderId: string, bucketName?: string): Promise<void>;
+  checkOutputExists?(
+    outputKey: string,
+    bucketName?: string,
+  ): Promise<{ exists: boolean; url?: string }>;
 }
 
 export function createRemotionLambdaClient(): LambdaRenderClient {
@@ -39,7 +47,11 @@ export function createRemotionLambdaClient(): LambdaRenderClient {
   const bucketName = config.bucketName;
 
   return {
-    async renderMedia(input: InvitationInput, tier: RenderTier = "free") {
+    async renderMedia(
+      input: InvitationInput,
+      tier: RenderTier = "free",
+      outputKey?: string,
+    ) {
       const inputProps = {
         recipientName: null,
         message: null,
@@ -59,13 +71,32 @@ export function createRemotionLambdaClient(): LambdaRenderClient {
         codec: "h264",
         scale: tier === "hd" ? 1 : 2 / 3,
         privacy: "public",
-        outName: `renders/${input.templateId}-${Date.now()}.mp4`,
+        outName: outputKey ?? `renders/${input.templateId}-${Date.now()}.mp4`,
       });
 
       return { renderId: result.renderId, bucketName: result.bucketName };
     },
 
-    async renderStill(input: InvitationInput) {
+    async checkOutputExists(outputKey: string, customBucket?: string) {
+      const targetBucket = customBucket || bucketName;
+      try {
+        const url = await presignUrl({
+          region,
+          bucketName: targetBucket,
+          objectKey: outputKey,
+          checkIfObjectExists: true,
+          expiresInSeconds: 86400,
+        });
+        if (!url) {
+          return { exists: false };
+        }
+        return { exists: true, url };
+      } catch {
+        return { exists: false };
+      }
+    },
+
+    async renderStill(input: InvitationInput, posterKey?: string) {
       const inputProps = {
         recipientName: null,
         message: null,
@@ -84,7 +115,7 @@ export function createRemotionLambdaClient(): LambdaRenderClient {
         inputProps,
         imageFormat: "png",
         privacy: "public",
-        outName: `posters/${input.templateId}-${Date.now()}.png`,
+        outName: posterKey ?? `posters/${input.templateId}-${Date.now()}.png`,
       });
 
       return result.url;
@@ -120,6 +151,14 @@ export function createRemotionLambdaClient(): LambdaRenderClient {
         progress,
         fileUrl: result.outputFile ?? undefined,
       };
+    },
+
+    async cancelRender(renderId: string, customBucketName?: string) {
+      await cancelRenderOnLambda({
+        renderId,
+        bucketName: customBucketName || bucketName,
+        region,
+      });
     },
   };
 }

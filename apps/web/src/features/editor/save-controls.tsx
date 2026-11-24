@@ -128,7 +128,11 @@ function Controls({
         </button>
         <button
           type="button"
-          disabled={invalid || busy}
+          disabled={
+            invalid ||
+            busy ||
+            job.data?.status === "submission_uncertain"
+          }
           onClick={() => exportVideo.mutate()}
           className="rounded-full bg-accent px-6 py-3 text-white disabled:opacity-50"
         >
@@ -152,6 +156,12 @@ function Controls({
         <div aria-live="polite">
           {job.data.status === "queued" && <p>Your video is queued.</p>}
           {job.data.status === "rendering" && <p>Rendering your video…</p>}
+          {job.data.status === "submission_uncertain" && (
+            <div role="status" className="space-y-1">
+              <p>We could not confirm this export. Do not retry; it is being recovered.</p>
+              <p className="text-xs opacity-75">Recovery reference: {job.data.id}</p>
+            </div>
+          )}
           {job.data.status === "failed" && (
             <p role="alert">{job.data.error} Use Export video to retry.</p>
           )}
