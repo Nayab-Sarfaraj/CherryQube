@@ -2,7 +2,7 @@
 
 import { useSignIn } from "@clerk/nextjs/legacy";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { safeMobileReturnPath } from "./return-path";
 
 declare global {
@@ -15,7 +15,7 @@ function nativeMessage(type: "AUTH_HANDOFF_COMPLETE" | "REQUEST_AUTH") {
   window.ReactNativeWebView?.postMessage(JSON.stringify({ type }));
 }
 
-export default function MobileAuthPage() {
+function MobileAuthContent() {
   const { isLoaded, signIn, setActive } = useSignIn();
   const params = useSearchParams();
   const [error, setError] = useState("");
@@ -78,6 +78,25 @@ export default function MobileAuthPage() {
         )}
       </div>
     </main>
+  );
+}
+
+function MobileAuthFallback() {
+  return (
+    <main className="mx-auto flex min-h-dvh max-w-md items-center px-6 text-center">
+      <div>
+        <h1 className="font-display text-3xl">Signing you in…</h1>
+        <p className="mt-3">You can return to the app in a moment.</p>
+      </div>
+    </main>
+  );
+}
+
+export default function MobileAuthPage() {
+  return (
+    <Suspense fallback={<MobileAuthFallback />}>
+      <MobileAuthContent />
+    </Suspense>
   );
 }
 

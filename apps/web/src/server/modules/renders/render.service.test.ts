@@ -147,4 +147,257 @@ describe("render safeguards", () => {
       t.renders.enqueue.mock.calls[1][2],
     );
   });
+
+  it("does not let a stale Lambda failure overwrite a retried render", async () => {
+    const id = "a".repeat(24);
+    let record: {
+      _id: string;
+      invitationId: string;
+      status: "queued" | "rendering" | "failed";
+      lambdaRenderId?: string;
+      bucketName?: string;
+      attempts: number;
+      tier: "free";
+      input: {
+        templateId: string;
+        props: (typeof templates)[number]["defaultProps"];
+      };
+    } = {
+      _id: id,
+      invitationId: "b".repeat(24),
+      status: "rendering" as const,
+      lambdaRenderId: "lambda-old",
+      bucketName: "bucket",
+      attempts: 1,
+      tier: "free" as const,
+      input: {
+        templateId: "harvest-card",
+        props: templates[0].defaultProps,
+      },
+    };
+    let releaseStalePoll!: () => void;
+    const staleProgress = new Promise<{ error: string }>((resolve) => {
+      releaseStalePoll = () => resolve({ error: "Lambda failed" });
+    });
+    const renders = {
+      get: vi.fn().mockImplementation(async () => ({ ...record })),
+      sweep: vi.fn(),
+      failLambda: vi.fn(async (_id: string, lambdaRenderId: string) => {
+        if (
+          record.status !== "rendering" ||
+          record.lambdaRenderId !== lambdaRenderId
+        )
+          return null;
+        record = { ...record, status: "failed" as const };
+        return { ...record };
+      }),
+      retryById: vi.fn(async () => {
+        record = {
+          ...record,
+          status: "queued" as const,
+          lambdaRenderId: undefined,
+          bucketName: undefined,
+        };
+        return { ...record };
+      }),
+      completeLambda: vi.fn(),
+      updateProgress: vi.fn(),
+    };
+    let progressCalls = 0;
+    const deps = {
+      invitations: { get: vi.fn() },
+      renders,
+      limit: vi.fn(),
+      checkPhoto: vi.fn(),
+      bindResult: vi.fn(),
+      reserveHd: vi.fn(),
+      environment: () => "sandbox" as const,
+      isLambdaEnabled: () => true,
+      getLambdaClient: () => ({
+        renderMedia: vi.fn(),
+        getProgress: vi.fn(() => {
+          progressCalls += 1;
+          return progressCalls === 1
+            ? staleProgress
+            : Promise.resolve({
+                done: false,
+                progress: 0,
+                error: "Lambda failed",
+              });
+        }),
+      }),
+    };
+    const service = createRenderService(
+      deps as unknown as Parameters<typeof createRenderService>[0],
+    );
+
+    const stalePoll = service.get("owner", id);
+    await vi.waitFor(() => expect(progressCalls).toBe(1));
+    await service.get("owner", id);
+    await renders.retryById();
+    releaseStalePoll();
+
+    await expect(stalePoll).resolves.toMatchObject({ status: "queued" });
+    expect(record.status).toBe("queued");
+    expect(record.lambdaRenderId).toBeUndefined();
+    expect(renders.failLambda).toHaveBeenCalledWith(
+      id,
+      "lambda-old",
+      "Lambda failed",
+    );
+  });
+
+  it("times out a stuck Lambda render after 10 minutes", async () => {
+    const id = "c".repeat(24);
+    const tenMinutesAgo = new Date(Date.now() - 650000);
+    let record: {
+      _id: string;
+      invitationId: string;
+      status: "rendering" | "failed";
+      lambdaRenderId: string;
+      bucketName: string;
+      attempts: number;
+      tier: "hd";
+      startedAt: Date;
+      input: {
+        templateId: string;
+        props: (typeof templates)[number]["defaultProps"];
+      };
+    } = {
+      _id: id,
+      invitationId: "b".repeat(24),
+      status: "rendering" as const,
+      lambdaRenderId: "lambda-stuck",
+      bucketName: "bucket",
+      attempts: 1,
+      tier: "hd" as const,
+      startedAt: tenMinutesAgo,
+      input: {
+        templateId: "harvest-card",
+        props: templates[0].defaultProps,
+      },
+    };
+    const renders = {
+      get: vi.fn().mockImplementation(async () => ({ ...record })),
+      sweep: vi.fn(),
+      failLambda: vi.fn(async () => {
+        record = {
+          ...record,
+          status: "failed" as const,
+        };
+        return {
+          ...record,
+          error: "Rendering timed out. Your export credit was returned.",
+        };
+      }),
+      completeLambda: vi.fn(),
+      updateProgress: vi.fn(),
+    };
+    const deps = {
+      invitations: { get: vi.fn() },
+      renders,
+      limit: vi.fn(),
+      checkPhoto: vi.fn(),
+      bindResult: vi.fn(),
+      reserveHd: vi.fn(),
+      environment: () => "sandbox" as const,
+      isLambdaEnabled: () => true,
+      getLambdaClient: () => ({
+        renderMedia: vi.fn(),
+        getProgress: vi.fn().mockResolvedValue({
+          done: false,
+          progress: 50,
+        }),
+      }),
+    };
+    const service = createRenderService(
+      deps as unknown as Parameters<typeof createRenderService>[0],
+    );
+
+    const result = await service.get("owner", id);
+    expect(renders.failLambda).toHaveBeenCalledWith(
+      id,
+      "lambda-stuck",
+      "Rendering timed out. Your export credit was returned.",
+    );
+    expect(result.status).toBe("failed");
+  });
+
+  it("completes an expired Lambda render if Lambda finished", async () => {
+    const id = "d".repeat(24);
+    const tenMinutesAgo = new Date(Date.now() - 650000);
+    let record: {
+      _id: string;
+      invitationId: string;
+      status: "rendering" | "ready";
+      lambdaRenderId: string;
+      bucketName: string;
+      attempts: number;
+      tier: "free";
+      startedAt: Date;
+      input: {
+        templateId: string;
+        props: (typeof templates)[number]["defaultProps"];
+      };
+    } = {
+      _id: id,
+      invitationId: "b".repeat(24),
+      status: "rendering" as const,
+      lambdaRenderId: "lambda-done",
+      bucketName: "bucket",
+      attempts: 1,
+      tier: "free" as const,
+      startedAt: tenMinutesAgo,
+      input: {
+        templateId: "harvest-card",
+        props: templates[0].defaultProps,
+      },
+    };
+    const renders = {
+      get: vi.fn().mockImplementation(async () => ({ ...record })),
+      sweep: vi.fn(),
+      failLambda: vi.fn(),
+      completeLambda: vi.fn(async () => {
+        record = {
+          ...record,
+          status: "ready" as const,
+        };
+        return {
+          ...record,
+          fileUrl: "https://example.com/video.mp4",
+        };
+      }),
+      updateProgress: vi.fn(),
+    };
+    const deps = {
+      invitations: { get: vi.fn() },
+      renders,
+      limit: vi.fn(),
+      checkPhoto: vi.fn(),
+      bindResult: vi.fn(),
+      reserveHd: vi.fn(),
+      environment: () => "sandbox" as const,
+      isLambdaEnabled: () => true,
+      getLambdaClient: () => ({
+        renderMedia: vi.fn(),
+        getProgress: vi.fn().mockResolvedValue({
+          done: true,
+          progress: 100,
+          fileUrl: "https://example.com/video.mp4",
+        }),
+      }),
+    };
+    const service = createRenderService(
+      deps as unknown as Parameters<typeof createRenderService>[0],
+    );
+
+    const result = await service.get("owner", id);
+    expect(renders.completeLambda).toHaveBeenCalledWith(
+      id,
+      "lambda-done",
+      "https://example.com/video.mp4",
+    );
+    expect(renders.failLambda).not.toHaveBeenCalled();
+    expect(result.status).toBe("ready");
+  });
 });

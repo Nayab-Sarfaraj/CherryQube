@@ -43,6 +43,143 @@ const defaultDependencies = {
   getLambdaClient: createRemotionLambdaClient,
 };
 export function createRenderService(deps: typeof defaultDependencies) {
+  type RenderJob = NonNullable<Awaited<ReturnType<typeof deps.renders.get>>>;
+
+  async function dispatchToLambda(
+    owner: string,
+    job: RenderJob,
+  ): Promise<RenderJob> {
+    if (!deps.isLambdaEnabled?.()) return job;
+
+    const id = String(job._id);
+    const claimed = await deps.renders.claimLambda(id);
+    if (!claimed) return (await deps.renders.get(owner, id)) ?? job;
+
+    try {
+      const lambda = deps.getLambdaClient();
+      const { renderId, bucketName } = await lambda.renderMedia(
+        invitationInput.parse(claimed.input),
+        claimed.tier,
+      );
+      const updated = await deps.renders.updateLambdaJob(
+        id,
+        claimed.attemptId!,
+        renderId,
+        bucketName,
+      );
+      return updated ?? (await deps.renders.get(owner, id)) ?? claimed;
+    } catch (error) {
+      log("error", "render.lambda.start-failed", {
+        id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return (
+        (await deps.renders.failLambdaStart(
+          id,
+          claimed.attemptId!,
+          "The video could not be started. Try exporting again.",
+        )) ??
+        (await deps.renders.get(owner, id)) ??
+        claimed
+      );
+    }
+  }
+
+  async function reconcileLambda(
+    owner: string,
+    item: RenderJob,
+  ): Promise<RenderJob> {
+    if (
+      !item ||
+      item.status !== "rendering" ||
+      !item.lambdaRenderId ||
+      !deps.isLambdaEnabled?.()
+    )
+      return item;
+
+    const id = String(item._id);
+    const lambdaRenderId = item.lambdaRenderId;
+    const isTimedOut =
+      item.startedAt &&
+      Date.now() - new Date(item.startedAt).getTime() >= 600000;
+    try {
+      const lambda = deps.getLambdaClient();
+      const progress = await lambda.getProgress(
+        lambdaRenderId,
+        item.bucketName ?? undefined,
+      );
+      if (progress.done && progress.fileUrl) {
+        const updated = await deps.renders.completeLambda(
+          id,
+          lambdaRenderId,
+          progress.fileUrl,
+        );
+        if (updated) {
+          await publishResults(owner, id).catch(() =>
+            log("error", "render.publication-deferred", { renderId: id }),
+          );
+          return updated;
+        }
+      } else if (progress.error) {
+        const updated = await deps.renders.failLambda(
+          id,
+          lambdaRenderId,
+          progress.error,
+        );
+        if (updated) return updated;
+      } else if (isTimedOut) {
+        const updated = await deps.renders.failLambda(
+          id,
+          lambdaRenderId,
+          item.tier === "hd"
+            ? "Rendering timed out. Your export credit was returned."
+            : "Rendering timed out. Try exporting again.",
+        );
+        if (updated) return updated;
+      } else if (
+        typeof progress.progress === "number" &&
+        progress.progress !== item.progress
+      ) {
+        const updated = await deps.renders.updateProgress(
+          id,
+          lambdaRenderId,
+          progress.progress,
+        );
+        if (updated) return updated;
+      }
+      return (await deps.renders.get(owner, id)) ?? item;
+    } catch (error) {
+      if (isTimedOut) {
+        const updated = await deps.renders.failLambda(
+          id,
+          lambdaRenderId,
+          item.tier === "hd"
+            ? "Rendering timed out. Your export credit was returned."
+            : "Rendering timed out. Try exporting again.",
+        );
+        if (updated) return updated;
+      }
+      log("error", "render.lambda.progress-failed", {
+        id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return item;
+    }
+  }
+
+  async function sweep() {
+    if (deps.isLambdaEnabled?.()) {
+      const cutoff = new Date(Date.now() - 600000);
+      const expiredLambda = await deps.renders.findExpiredLambdaRenders?.(cutoff);
+      if (expiredLambda?.length) {
+        await Promise.all(
+          expiredLambda.map((job) => reconcileLambda(job.ownerClerkId, job)),
+        );
+      }
+    }
+    await deps.renders.sweep();
+  }
+
   return {
     async request(
       owner: string,
@@ -81,8 +218,12 @@ export function createRenderService(deps: typeof defaultDependencies) {
       const cached = await deps.renders.find(owner, propsHash);
       if (cached && cached.status !== "failed") {
         await deps.renders.attach(owner, propsHash, id);
-        await deps.bindResult(owner, id, cached);
-        return cached;
+        const dispatched =
+          cached.status === "queued"
+            ? await dispatchToLambda(owner, cached)
+            : cached;
+        await deps.bindResult(owner, id, dispatched);
+        return dispatched;
       }
       await deps.limit(`render:${owner}`, 10);
       if (ip)
@@ -99,8 +240,10 @@ export function createRenderService(deps: typeof defaultDependencies) {
             input,
             environment!,
           );
-          if (job) await deps.bindResult(owner, id, job);
-          return job;
+          if (!job) throw new Error("Render queue unavailable");
+          const dispatched = await dispatchToLambda(owner, job);
+          await deps.bindResult(owner, id, dispatched);
+          return dispatched;
         } catch (error) {
           if (error instanceof InsufficientBalance)
             throw new PaymentRequiredError(
@@ -125,78 +268,32 @@ export function createRenderService(deps: typeof defaultDependencies) {
             "This video has reached its retry limit. Change the content before exporting again.",
           );
         }
-        await deps.bindResult(owner, id, retried);
-        return retried;
+        const dispatched = await dispatchToLambda(owner, retried);
+        if (dispatched) await deps.bindResult(owner, id, dispatched);
+        return dispatched;
       }
       const job = await deps.renders.enqueue(owner, id, propsHash, input);
-      if (job) {
-        await deps.bindResult(owner, id, job);
-        if (deps.isLambdaEnabled?.()) {
-          try {
-            const lambda = deps.getLambdaClient();
-            const { renderId, bucketName } = await lambda.renderMedia(
-              input,
-              quality,
-            );
-            const updated = await deps.renders.updateLambdaJob(
-              String(job._id),
-              renderId,
-              bucketName,
-            );
-            if (updated) {
-              await deps.bindResult(owner, id, updated);
-              return updated;
-            }
-          } catch (error) {
-            log("error", "render.lambda.start-failed", {
-              id: String(job._id),
-              error: error instanceof Error ? error.message : String(error),
-            });
-          }
-        }
-      }
-      return job;
+      if (!job) throw new Error("Render queue unavailable");
+      const dispatched = await dispatchToLambda(owner, job);
+      await deps.bindResult(owner, id, dispatched);
+      return dispatched;
     },
     async get(owner: string, id: string) {
       if (!/^[a-f0-9]{24}$/i.test(id)) throw new NotFoundError();
-      await deps.renders.sweep();
       let item = await deps.renders.get(owner, id);
       if (!item) throw new NotFoundError();
 
-      if (
-        item.status === "rendering" &&
-        item.lambdaRenderId &&
-        deps.isLambdaEnabled?.()
-      ) {
-        try {
-          const lambda = deps.getLambdaClient();
-          const progress = await lambda.getProgress(
-            item.lambdaRenderId,
-            item.bucketName ?? undefined,
-          );
-          if (progress.done && progress.fileUrl) {
-            item =
-              (await deps.renders.completeLambda(id, progress.fileUrl)) ?? item;
-            await publishResults(owner, id);
-          } else if (progress.error) {
-            item = (await deps.renders.failLambda(id, progress.error)) ?? item;
-          } else if (
-            typeof progress.progress === "number" &&
-            progress.progress !== item.progress
-          ) {
-            item =
-              (await deps.renders.updateProgress(id, progress.progress)) ??
-              item;
-          }
-        } catch (error) {
-          log("error", "render.lambda.progress-failed", {
-            id,
-            error: error instanceof Error ? error.message : String(error),
-          });
-        }
+      item = await reconcileLambda(owner, item);
+      await sweep();
+      if (item.status === "rendering" || item.status === "queued") {
+        item = (await deps.renders.get(owner, id)) ?? item;
       }
 
-      if (item.status === "ready") await publishResults(owner, id);
+      if (item.status === "ready") {
+        await publishResults(owner, id).catch(() =>
+          log("error", "render.publication-deferred", { renderId: id }),
+        );
+      }
       return item;
     },
     async retry(owner: string, id: string, ip?: string) {
@@ -216,17 +313,26 @@ export function createRenderService(deps: typeof defaultDependencies) {
         );
       const retried = await deps.renders.retryById(owner, id);
       if (!retried) return (await deps.renders.get(owner, id)) ?? current;
-      await deps.bindResult(owner, retried.invitationId, retried);
-      return retried;
+      const dispatched = await dispatchToLambda(owner, retried);
+      if (dispatched)
+        await deps.bindResult(owner, dispatched.invitationId, dispatched);
+      return dispatched;
     },
+    async list(owner: string) {
+      const items = await deps.renders.list(owner);
+      await Promise.all(items.map((item) => reconcileLambda(owner, item)));
+      await sweep();
+      return deps.renders.list(owner);
+    },
+    sweep,
   };
 }
 export const renderService = createRenderService(defaultDependencies);
 export const requestRender = renderService.request;
 export const getRender = renderService.get;
 export const retryRender = renderService.retry;
+export const sweepRenders = renderService.sweep;
 
 export async function listRenderJobs(owner: string) {
-  await renderRepository.sweep();
-  return renderRepository.list(owner);
+  return renderService.list(owner);
 }

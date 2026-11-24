@@ -23,7 +23,14 @@ export const renderRepository = {
       { ownerClerkId, _id: id, status: "failed", attempts: { $lt: 3 } },
       {
         $set: { status: "queued" },
-        $unset: { error: 1, startedAt: 1, attemptId: 1 },
+        $unset: {
+          error: 1,
+          startedAt: 1,
+          attemptId: 1,
+          lambdaRenderId: 1,
+          bucketName: 1,
+          progress: 1,
+        },
       },
       { returnDocument: "after" },
     ).lean();
@@ -76,9 +83,31 @@ export const renderRepository = {
           startedAt: new Date(),
           attemptId: randomUUID(),
         },
+        $unset: { lambdaRenderId: 1, bucketName: 1, error: 1 },
         $inc: { attempts: 1 },
       },
       { returnDocument: "after", sort: { createdAt: 1 } },
+    ).lean();
+  },
+  /**
+   * Claims a queued job for Lambda before starting the remote render. This
+   * prevents a second request or the local worker from taking the same job.
+   */
+  async claimLambda(id: string) {
+    await connectDb();
+    return Render.findOneAndUpdate(
+      { _id: id, status: "queued" },
+      {
+        $set: {
+          status: "rendering",
+          startedAt: new Date(),
+          attemptId: randomUUID(),
+          progress: 1,
+        },
+        $unset: { lambdaRenderId: 1, bucketName: 1, error: 1 },
+        $inc: { attempts: 1 },
+      },
+      { returnDocument: "after" },
     ).lean();
   },
   async complete(
@@ -124,7 +153,17 @@ export const renderRepository = {
         status: "failed",
         attempts: { $lt: 3 },
       },
-      { $set: { status: "queued" }, $unset: { error: 1, startedAt: 1 } },
+      {
+        $set: { status: "queued" },
+        $unset: {
+          error: 1,
+          startedAt: 1,
+          attemptId: 1,
+          lambdaRenderId: 1,
+          bucketName: 1,
+          progress: 1,
+        },
+      },
       { returnDocument: "after" },
     ).lean();
   },
@@ -136,7 +175,11 @@ export const renderRepository = {
       {
         tier: { $ne: "hd" },
         $or: [
-          { status: "rendering", startedAt: { $lt: cutoff } },
+          {
+            status: "rendering",
+            lambdaRenderId: { $exists: false },
+            startedAt: { $lt: cutoff },
+          },
           { status: "queued", updatedAt: { $lt: cutoff } },
         ],
       },
@@ -157,12 +200,18 @@ export const renderRepository = {
   },
   async updateLambdaJob(
     id: string,
+    attemptId: string,
     lambdaRenderId: string,
     bucketName: string,
   ) {
     await connectDb();
-    return Render.findByIdAndUpdate(
-      id,
+    return Render.findOneAndUpdate(
+      {
+        _id: id,
+        attemptId,
+        status: "rendering",
+        lambdaRenderId: { $exists: false },
+      },
       {
         $set: {
           status: "rendering",
@@ -175,18 +224,23 @@ export const renderRepository = {
       { returnDocument: "after" },
     ).lean();
   },
-  async updateProgress(id: string, progress: number) {
+  async updateProgress(id: string, lambdaRenderId: string, progress: number) {
     await connectDb();
-    return Render.findByIdAndUpdate(
-      id,
+    return Render.findOneAndUpdate(
+      { _id: id, lambdaRenderId, status: "rendering" },
       { $set: { progress } },
       { returnDocument: "after" },
     ).lean();
   },
-  async completeLambda(id: string, fileUrl: string, posterUrl?: string) {
+  async completeLambda(
+    id: string,
+    lambdaRenderId: string,
+    fileUrl: string,
+    posterUrl?: string,
+  ) {
     await connectDb();
-    return Render.findByIdAndUpdate(
-      id,
+    return Render.findOneAndUpdate(
+      { _id: id, lambdaRenderId, status: "rendering" },
       {
         $set: {
           status: "ready",
@@ -199,16 +253,59 @@ export const renderRepository = {
       { returnDocument: "after" },
     ).lean();
   },
-  async failLambda(id: string, error: string) {
+  async failLambda(id: string, lambdaRenderId: string, error: string) {
     await connectDb();
-    return Render.findByIdAndUpdate(
-      id,
+    const job = await Render.findOne({
+      _id: id,
+      lambdaRenderId,
+      status: "rendering",
+    })
+      .select("tier")
+      .lean();
+    if (job?.tier === "hd") {
+      await paidRenderRepository.failLambda(id, lambdaRenderId, error);
+      return Render.findById(id).lean();
+    }
+    return Render.findOneAndUpdate(
+      { _id: id, lambdaRenderId, status: "rendering" },
       {
         $set: {
           status: "failed",
           error,
         },
       },
+      { returnDocument: "after" },
+    ).lean();
+  },
+  async findExpiredLambdaRenders(cutoff: Date) {
+    await connectDb();
+    return Render.find({
+      status: "rendering",
+      lambdaRenderId: { $exists: true },
+      startedAt: { $lt: cutoff },
+    }).lean();
+  },
+  async failLambdaStart(id: string, attemptId: string, error: string) {
+    await connectDb();
+    const job = await Render.findOne({
+      _id: id,
+      attemptId,
+      status: "rendering",
+    })
+      .select("tier")
+      .lean();
+    if (job?.tier === "hd") {
+      await paidRenderRepository.fail(id, attemptId);
+      return Render.findById(id).lean();
+    }
+    return Render.findOneAndUpdate(
+      {
+        _id: id,
+        attemptId,
+        status: "rendering",
+        lambdaRenderId: { $exists: false },
+      },
+      { $set: { status: "failed", error } },
       { returnDocument: "after" },
     ).lean();
   },

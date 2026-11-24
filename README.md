@@ -79,15 +79,17 @@ Swap `harvest-card` for `harvest-invitation`, `evergreen-card`, `evergreen-invit
 
 ## Saved drafts and exports
 
-Run the render worker in a second terminal (requires Clerk keys in `.env.local`):
+For local rendering, run the worker in a second terminal (requires Clerk keys in `.env.local`):
 
 ```sh
 pnpm --filter @greetings/web worker
 ```
 
-The worker reads jobs from MongoDB, writes watermarked 720p MP4s and posters, and removes unreferenced photos older than seven days at startup. Export status and downloads appear in the editor and dashboard.
+The development worker reads jobs from MongoDB, writes watermarked 720p MP4s and posters, and removes unreferenced photos older than seven days at startup. Export status and downloads appear in the editor and dashboard.
 
-> This local adapter is for development only. S3 presigned uploads, Lambda execution/webhooks, and AWS operational setup remain deployment work. Clerk webhooks hit `/api/webhooks/clerk` and need `CLERK_WEBHOOK_SECRET`.
+For a deployed app, configure Remotion Lambda with `REMOTION_AWS_FUNCTION_NAME`, `REMOTION_SERVE_URL`, and `REMOTION_BUCKET_NAME` (or `S3_BUCKET`). The web service atomically claims each queued render and submits it directly to Lambda, including new exports, retries, HD jobs, and previously queued cached jobs. It polls Lambda status through the existing render API, so a long-running worker is not required in a Lambda-enabled deployment.
+
+> Local media storage and the worker are development adapters. Production still needs S3 presigned uploads and AWS operational setup. Clerk webhooks hit `/api/webhooks/clerk` and need `CLERK_WEBHOOK_SECRET`.
 
 To exercise the local pipeline against an isolated test database:
 
@@ -101,15 +103,15 @@ pnpm --filter @greetings/web exec tsx scripts/verify-render-pipeline.ts
 
 After exporting, choose **Open shareable result** in the editor or **Open result page** in the dashboard. Recipients can watch, download, share, or make their own creation without signing in. Set `APP_BASE_URL` to your deployed HTTPS origin before testing link previews in WhatsApp, iMessage, or X. Details are in `docs/stage-5.md`.
 
-## Paid HD exports
+## Paid HD exports (implemented, currently disabled)
 
-Stage 6 adds Polar one-time packs, a transactional credit ledger, and HD exports without a watermark. Configure Polar sandbox products/keys and real seller/support details in `.env.example`; setup notes are in `docs/stage-6.md`. Prices are fetched from Polar. A checkout redirect alone never adds credits.
+Polar one-time packs, the transactional credit ledger, and clean 1080p HD exports remain in the codebase, but are not part of the current launch UI. `NEXT_PUBLIC_ENABLE_PAID_EXPORTS=false` hides the paid controls and forces export requests to the free tier. Free exports remain watermarked.
 
-Keep the worker running — it renders free jobs at 720p with a watermark and funded HD jobs at 1080p without one, and refunds failed paid jobs automatically.
+Set `NEXT_PUBLIC_ENABLE_PAID_EXPORTS=true` only when Polar products, seller/support details, webhooks, and the paid-export launch decision are ready. Funded HD jobs render at 1080p without a watermark; failed paid jobs refund their credit automatically.
 
-## AI message writer
+## AI message writer (implemented, currently hidden)
 
-Signed-in users can choose **Write it for me**, pick a tone and US or UK spelling, and select from three editable suggestions. Add `ANTHROPIC_API_KEY` to `apps/web/.env.local` to use Anthropic. Without a key — or if the provider times out — the flow returns curated suggestions and explains the fallback. See `docs/stage-7.md`.
+The server-side Anthropic integration and editable fallback suggestions are retained, but the editor does not show **Write it for me** by default. Set `NEXT_PUBLIC_ENABLE_AI_WRITER=true` to expose it after adding `ANTHROPIC_API_KEY` to `apps/web/.env.local`. Without a key — or if the provider times out — the flow returns curated suggestions and explains the fallback. See `docs/stage-7.md`.
 
 ## Personalized guest links
 
@@ -136,7 +138,7 @@ Configure `EXPO_PUBLIC_WEB_ORIGIN` and `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` in `a
 ## Documentation
 
 - `docs/qa-phase-1-2.md` — Remotion core and Thanksgiving template QA
-- `docs/stage-4.md` — Local render pipeline (photo upload, Mongo queue, worker)
+- `docs/stage-4.md` — Render pipeline: local worker for development and direct Lambda dispatch for deployment
 - `docs/stage-5.md` — Public `/c/[shareId]` result pages, metadata, download, sharing
 - `docs/stage-6.md` — Polar payments, HD exports, credit ledger
 - `docs/stage-7.md` — AI message writer with Anthropic and curated fallback
@@ -146,8 +148,11 @@ Configure `EXPO_PUBLIC_WEB_ORIGIN` and `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` in `a
 
 ## Still deployment work
 
-- S3 presigned uploads and Lambda/webhook render pipeline (currently local file storage + Mongo worker)
-- AWS budget alarm and Lambda concurrency increase
-- Real Polar sandbox checkout round trip and pack pricing
+- Provision the Remotion Lambda site/function and S3 bucket, then add the required production environment variables
+- Replace the local upload adapter with S3 presigned uploads and lifecycle rules
+- Measure Lambda cost, add an AWS budget alarm, and set an appropriate Lambda concurrency limit
+- Fix the current `/mobile-auth` production-build Suspense boundary before Vercel deployment
+- Decide when to enable Polar checkout and paid HD exports; until then, keep `NEXT_PUBLIC_ENABLE_PAID_EXPORTS=false`
+- Decide when to expose the AI writer; until then, keep `NEXT_PUBLIC_ENABLE_AI_WRITER=false`
 - Real-device QA: link previews in WhatsApp/iMessage/X, RSVP prefill on iPhone and Android, WebView auth handoff on a physical device
 - RevenueCat / Google Play Billing and Play Store release
