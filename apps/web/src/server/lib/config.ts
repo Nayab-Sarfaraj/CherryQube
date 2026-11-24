@@ -100,6 +100,11 @@ export function checkoutEnabled() {
   );
 }
 
+/** Paid exports remain implemented, but are opt-in until billing is launched. */
+export function paidExportsEnabled() {
+  return process.env.NEXT_PUBLIC_ENABLE_PAID_EXPORTS === "true";
+}
+
 const anthropicModel = z.string().regex(/^[a-zA-Z0-9._-]{1,100}$/);
 export function llmSettings() {
   return {

@@ -5,6 +5,7 @@ import { requireUser } from "../../middleware/auth";
 import { errorResponse } from "../../lib/errors";
 import { getRender, requestRender, retryRender } from "./render.service";
 import { renderDto } from "./render.mapper";
+import { paidExportsEnabled } from "../../lib/config";
 export async function create(
   request: Request,
   context: { params: Promise<{ id: string }> },
@@ -23,7 +24,7 @@ export async function create(
       owner,
       (await context.params).id,
       request.headers.get("x-forwarded-for")?.split(",")[0]?.trim(),
-      choice.quality,
+      paidExportsEnabled() ? choice.quality : "free",
     );
     if (!item) throw new Error("Render queue unavailable");
     return Response.json(renderDto(item), { status: 202 });

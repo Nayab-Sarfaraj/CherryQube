@@ -1,4 +1,4 @@
-import * as Clipboard from "expo-clipboard";
+import { copyToClipboard } from "@/lib/safe-clipboard";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { router, useLocalSearchParams } from "expo-router";
 import { themeNames, type ThemeId } from "@greetings/shared";
@@ -93,7 +93,7 @@ export default function CreationDetailRoute() {
 
   const handleCopyLink = async () => {
     if (!publicUrl) return;
-    await Clipboard.setStringAsync(publicUrl);
+    await copyToClipboard(publicUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
   };

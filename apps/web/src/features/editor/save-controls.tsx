@@ -27,10 +27,13 @@ function Controls({
   onExportRequested,
 }: Props) {
   const { isLoaded, isSignedIn } = useAppAuth();
+  const paidExportsEnabled =
+    process.env.NEXT_PUBLIC_ENABLE_PAID_EXPORTS === "true";
   const [quality, setQuality] = useState<ExportQuality>("free");
   const exportedRenderId = useRef<string | null>(null);
 
   useEffect(() => {
+    if (!paidExportsEnabled) return;
     const timer = setTimeout(() => {
       if (
         new URLSearchParams(window.location.search).get("checkout") ===
@@ -39,7 +42,7 @@ function Controls({
         setQuality("hd");
     }, 0);
     return () => clearTimeout(timer);
-  }, []);
+  }, [paidExportsEnabled]);
 
   const { saveDraft, exportVideo, job, busy, savedId, prepareDraft } =
     useExportCreation(input, photo, initialId, quality);
@@ -107,11 +110,13 @@ function Controls({
     );
   return (
     <section aria-label="Save and export" className="mt-6 space-y-3">
-      <ExportQualityOptions
-        quality={quality}
-        onChange={setQuality}
-        disabled={busy}
-      />
+      {paidExportsEnabled && (
+        <ExportQualityOptions
+          quality={quality}
+          onChange={setQuality}
+          disabled={busy}
+        />
+      )}
       <div className="flex flex-wrap gap-3">
         <button
           type="button"
@@ -129,9 +134,9 @@ function Controls({
         >
           {exportVideo.isPending
             ? "Preparing video…"
-            : quality === "hd"
+            : paidExportsEnabled && quality === "hd"
               ? "Export HD video"
-              : "Export free video"}
+              : "Export video"}
         </button>
         <Link href="/dashboard" className="px-4 py-3 underline">
           Your creations
@@ -172,7 +177,7 @@ function Controls({
           )}
         </div>
       )}
-      {!embed && (
+      {paidExportsEnabled && !embed && (
         <BillingPanel prepareDraft={prepareDraft} disabled={invalid || busy} />
       )}
     </section>

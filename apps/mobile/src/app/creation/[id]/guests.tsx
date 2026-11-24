@@ -1,4 +1,4 @@
-import * as Clipboard from "expo-clipboard";
+import { copyToClipboard } from "@/lib/safe-clipboard";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useState } from "react";
 import {
@@ -75,7 +75,7 @@ export default function GuestsScreen() {
   const handleCopyAll = async () => {
     if (guests.length === 0) return;
     const payload = formatAllGuestsText(guests, WEB_ORIGIN);
-    await Clipboard.setStringAsync(payload);
+    await copyToClipboard(payload);
     setCopiedAll(true);
     setTimeout(() => setCopiedAll(false), 2000);
   };
