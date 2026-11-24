@@ -363,6 +363,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     flex: 1,
     marginBottom: 12,
+    maxWidth: "48.5%",
     minWidth: 0,
     padding: 8,
     ...mobileTheme.shadows.card,

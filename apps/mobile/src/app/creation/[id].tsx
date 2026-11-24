@@ -83,6 +83,14 @@ export default function CreationDetailRoute() {
     }
   }, [player, videoUrl]);
 
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/(tabs)/creations");
+    }
+  };
+
   const handleCopyLink = async () => {
     if (!publicUrl) return;
     await Clipboard.setStringAsync(publicUrl);
@@ -173,7 +181,7 @@ export default function CreationDetailRoute() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Back"
-          onPress={() => router.back()}
+          onPress={handleBack}
           style={styles.backButton}
           hitSlop={8}
         >
