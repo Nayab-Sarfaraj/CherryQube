@@ -260,7 +260,13 @@ export function createRenderService(deps: typeof defaultDependencies) {
       });
     }
 
-    await deps.renders.touchUncertainJob?.(id, attemptId);
+    await deps.renders.touchUncertainJob?.(id, attemptId)?.catch((error) =>
+      log("warn", "render.uncertain.touch-failed", {
+        id,
+        attemptId,
+        error: error instanceof Error ? error.message : String(error),
+      }),
+    );
 
     const submittedAt =
       job.submittedAt || job.startedAt || (job as { createdAt?: Date }).createdAt;
