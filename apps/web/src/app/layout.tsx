@@ -6,6 +6,7 @@ import { LegalFooter } from "@/components/legal/footer";
 import { Providers } from "@/components/providers";
 import { publicAuthKey } from "@/server/lib/config";
 import { siteConfig } from "@/lib/site-config";
+import { CRYPTO_SUBTLE_POLYFILL_SCRIPT } from "@/lib/crypto-subtle-polyfill";
 const fraunces = Fraunces({ subsets: ["latin"], variable: "--font-fraunces" });
 const figtree = Figtree({ subsets: ["latin"], variable: "--font-figtree" });
 
@@ -72,6 +73,11 @@ export default function RootLayout({
       }
     >
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: CRYPTO_SUBTLE_POLYFILL_SCRIPT,
+          }}
+        />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

@@ -27,13 +27,18 @@ export default function EditorRoute() {
   const allowingExit = useRef(false);
 
   useEffect(() => {
-    if (!isLoaded) dispatch({ type: "NATIVE_LOADING" });
-    else dispatch({ type: isSignedIn ? "HANDOFF_READY" : "SIGNED_OUT" });
-  }, [isLoaded, isSignedIn]);
-  useEffect(() => {
-    if (isSignedIn && auth.status === "signing-in")
-      dispatch({ type: "NATIVE_SIGNED_IN" });
-  }, [auth.status, isSignedIn]);
+    if (!isLoaded) {
+      dispatch({ type: "NATIVE_LOADING" });
+      return;
+    }
+    if (isSignedIn) {
+      if (auth.status !== "ready" && auth.status !== "handoff-pending") {
+        dispatch({ type: "NATIVE_SIGNED_IN" });
+      }
+    } else if (auth.status !== "signed-out" && auth.status !== "signing-in") {
+      dispatch({ type: "SIGNED_OUT" });
+    }
+  }, [auth.status, isLoaded, isSignedIn]);
 
   const leave = useCallback(() => {
     if (!dirty.current) {

@@ -21,6 +21,16 @@ describe("mobileAuthReducer", () => {
     );
   });
 
+  it("moves an already authenticated cold start into handoff-pending", () => {
+    const readyForHandoff = mobileAuthReducer(initialMobileAuthState, {
+      type: "NATIVE_SIGNED_IN",
+    });
+    expect(readyForHandoff).toMatchObject({
+      status: "handoff-pending",
+      error: null,
+    });
+  });
+
   it("counts silent renewal attempts", () => {
     const first = mobileAuthReducer(initialMobileAuthState, {
       type: "AUTH_EXPIRED",

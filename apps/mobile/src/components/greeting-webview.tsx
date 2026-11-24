@@ -12,6 +12,7 @@ import { shareCreation } from "@/lib/native-share";
 import { pickAndUploadPhoto } from "@/lib/photo-upload";
 import { mobileTheme } from "@/theme/theme";
 import {
+  CRYPTO_SUBTLE_POLYFILL_SCRIPT,
   parseWebToNativeBridgeMessage,
   type NativeToWebBridgeMessage,
 } from "@greetings/shared";
@@ -180,8 +181,10 @@ export function GreetingWebView({
       if (parsed.data.type === "REQUEST_PAYWALL")
         setError("In-app purchases will be available in the next app update.");
       if (parsed.data.type === "REQUEST_AUTH") onRequestSignIn();
-      if (parsed.data.type === "AUTH_HANDOFF_COMPLETE")
+      if (parsed.data.type === "AUTH_HANDOFF_COMPLETE") {
+        setTicket(null);
         onAuthAction({ type: "HANDOFF_READY" });
+      }
       if (parsed.data.type === "REQUEST_SIGN_OUT") onSignOut();
       if (parsed.data.type === "EXPORT_REQUESTED")
         onExportRequested?.(parsed.data.invitationId, parsed.data.renderId);
@@ -209,13 +212,16 @@ export function GreetingWebView({
           WEB_ORIGIN,
           ...(CLERK_FRONTEND_ORIGIN ? [CLERK_FRONTEND_ORIGIN] : []),
         ]}
+        injectedJavaScriptBeforeContentLoaded={CRYPTO_SUBTLE_POLYFILL_SCRIPT}
         onShouldStartLoadWithRequest={handleNavigation}
         onNavigationStateChange={(state: WebViewNavigation) => {
           currentUrlRef.current = state.url;
           if (!isAllowed(state.url)) return;
           try {
-            if (new URL(state.url).searchParams.get("nativeSession") === "1")
+            if (new URL(state.url).searchParams.get("nativeSession") === "1") {
+              setTicket(null);
               onAuthAction({ type: "HANDOFF_READY" });
+            }
           } catch {
             // Ignore malformed WebView URLs.
           }

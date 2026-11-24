@@ -55,9 +55,12 @@ function Controls({
       new URLSearchParams(window.location.search).get("nativeSession") !== "1"
     )
       return;
-    window.ReactNativeWebView?.postMessage(
-      JSON.stringify({ type: "AUTH_EXPIRED" }),
-    );
+    const timer = setTimeout(() => {
+      window.ReactNativeWebView?.postMessage(
+        JSON.stringify({ type: "AUTH_EXPIRED" }),
+      );
+    }, 1500);
+    return () => clearTimeout(timer);
   }, [embed, isLoaded, isSignedIn]);
   useEffect(() => {
     if (
