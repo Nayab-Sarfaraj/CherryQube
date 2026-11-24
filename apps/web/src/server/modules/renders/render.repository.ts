@@ -263,8 +263,25 @@ export const renderRepository = {
       status: "submission_uncertain",
       outputKey: { $exists: true },
     })
+      .sort({ lastReconciledAt: 1, updatedAt: 1 })
       .limit(limit)
       .lean();
+  },
+  async touchUncertainJob(id: string, attemptId: string) {
+    await connectDb();
+    return Render.findOneAndUpdate(
+      {
+        _id: id,
+        attemptId,
+        status: "submission_uncertain",
+      },
+      {
+        $set: {
+          lastReconciledAt: new Date(),
+        },
+      },
+      { returnDocument: "after" },
+    ).lean();
   },
   async recoverUncertainJob(
     id: string,
@@ -364,7 +381,7 @@ export const renderRepository = {
       .select("tier")
       .lean();
     if (job?.tier === "hd") {
-      await paidRenderRepository.fail(id, attemptId);
+      await paidRenderRepository.failLambdaStart(id, attemptId, error);
       return Render.findById(id).lean();
     }
     return Render.findOneAndUpdate(

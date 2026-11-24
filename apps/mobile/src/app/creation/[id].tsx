@@ -2,9 +2,10 @@ import { copyToClipboard } from "@/lib/safe-clipboard";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { router, useLocalSearchParams } from "expo-router";
 import { themeNames, type ThemeId } from "@greetings/shared";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -64,22 +65,43 @@ export default function CreationDetailRoute() {
   );
   const publicUrl = creation?.publicUrl;
 
+  const userPausedRef = useRef(false);
+  const loadIdRef = useRef(0);
+
   const player = useVideoPlayer(videoUrl ?? null, (p) => {
     p.loop = true;
-    if (videoUrl) {
+    if (videoUrl && !userPausedRef.current) {
       p.play();
     }
   });
 
   useEffect(() => {
+    if (!player) return;
+    const sub = player.addListener?.("playingChange", (payload: { isPlaying: boolean }) => {
+      userPausedRef.current = !payload.isPlaying;
+    });
+    return () => {
+      sub?.remove?.();
+    };
+  }, [player]);
+
+  useEffect(() => {
     if (videoUrl && player) {
+      const currentLoadId = ++loadIdRef.current;
       if (typeof player.replaceAsync === "function") {
-        void player.replaceAsync(videoUrl).then(() => {
-          player.play();
-        }).catch(() => {});
+        void player
+          .replaceAsync(videoUrl)
+          .then(() => {
+            if (currentLoadId === loadIdRef.current && !userPausedRef.current) {
+              player.play();
+            }
+          })
+          .catch(() => {});
       } else {
         player.replace(videoUrl);
-        player.play();
+        if (!userPausedRef.current) {
+          player.play();
+        }
       }
     }
   }, [player, videoUrl]);
@@ -94,9 +116,13 @@ export default function CreationDetailRoute() {
 
   const handleCopyLink = async () => {
     if (!publicUrl) return;
-    await copyToClipboard(publicUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
+    const ok = await copyToClipboard(publicUrl);
+    if (ok) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } else {
+      Alert.alert("Unable to copy", "Could not copy the link to your clipboard.");
+    }
   };
 
   const handleShare = async () => {

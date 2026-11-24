@@ -5,7 +5,7 @@ export function shouldPollCreations(
 ): number | false {
   if (!isFocused || !isForeground || !items) return false;
   const hasRendering = items.some((item) =>
-    ["queued", "rendering"].includes(item.status),
+    ["queued", "rendering", "submission_uncertain"].includes(item.status),
   );
   return hasRendering ? 3000 : false;
 }
@@ -16,12 +16,8 @@ export function shouldPollRender(
   status?: string,
 ): number | false {
   if (!isFocused || !isForeground || !status) return false;
-  if (
-    status === "ready" ||
-    status === "failed" ||
-    status === "submission_uncertain"
-  )
-    return false;
+  if (status === "ready" || status === "failed") return false;
+  if (status === "submission_uncertain") return 5000;
   return 2000;
 }
 

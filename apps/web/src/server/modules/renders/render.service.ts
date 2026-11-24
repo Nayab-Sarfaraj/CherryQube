@@ -37,6 +37,7 @@ const defaultDependencies = {
   limit: rateLimit,
   checkPhoto: assertOwnedPhoto,
   bindResult,
+  publishResults,
   reserveHd: paidRenderRepository.reserve,
   environment: () => paymentSettings().environment,
   isLambdaEnabled: remotionLambdaEnabled,
@@ -61,7 +62,11 @@ export function createRenderService(deps: typeof defaultDependencies) {
         }
       },
     );
-    await Promise.all(workers);
+    const settled = await Promise.allSettled(workers);
+    const rejected = settled.find(
+      (r): r is PromiseRejectedResult => r.status === "rejected",
+    );
+    if (rejected) throw rejected.reason;
     return results;
   }
 
@@ -238,9 +243,11 @@ export function createRenderService(deps: typeof defaultDependencies) {
             outputKey,
             posterKey,
           });
-          await publishResults(job.ownerClerkId, id).catch(() =>
-            log("error", "render.publication-deferred", { renderId: id }),
-          );
+          if (deps.publishResults) {
+            await deps.publishResults(job.ownerClerkId, id).catch(() =>
+              log("error", "render.publication-deferred", { renderId: id }),
+            );
+          }
           return recovered;
         }
       }
@@ -252,6 +259,8 @@ export function createRenderService(deps: typeof defaultDependencies) {
           checkError instanceof Error ? checkError.message : String(checkError),
       });
     }
+
+    await deps.renders.touchUncertainJob?.(id, attemptId);
 
     const submittedAt =
       job.submittedAt || job.startedAt || (job as { createdAt?: Date }).createdAt;
@@ -329,9 +338,11 @@ export function createRenderService(deps: typeof defaultDependencies) {
           ...(posterUrl ? [posterUrl] : []),
         );
         if (updated) {
-          await publishResults(owner, id).catch(() =>
-            log("error", "render.publication-deferred", { renderId: id }),
-          );
+          if (deps.publishResults) {
+            await deps.publishResults(owner, id).catch(() =>
+              log("error", "render.publication-deferred", { renderId: id }),
+            );
+          }
           return updated;
         }
       } else if (progress.error) {
@@ -525,9 +536,11 @@ export function createRenderService(deps: typeof defaultDependencies) {
       item = await reconcileLambda(owner, item);
 
       if (item.status === "ready") {
-        await publishResults(owner, id).catch(() =>
-          log("error", "render.publication-deferred", { renderId: id }),
-        );
+        if (deps.publishResults) {
+          await deps.publishResults(owner, id).catch(() =>
+            log("error", "render.publication-deferred", { renderId: id }),
+          );
+        }
       }
       return item;
     },
@@ -561,7 +574,12 @@ export function createRenderService(deps: typeof defaultDependencies) {
       if (activeLambda.length > 0) {
         await pMap(
           activeLambda,
-          (item) => reconcileLambda(owner, item),
+          async (item) => {
+            const fullRecord = await deps.renders.get(owner, String(item._id));
+            if (fullRecord) {
+              await reconcileLambda(owner, fullRecord);
+            }
+          },
           3,
         );
       }

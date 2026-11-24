@@ -53,6 +53,9 @@ describe("creations polling rules", () => {
     expect(shouldPollCreations(true, true, [{ status: "rendering" }])).toBe(
       3000,
     );
+    expect(
+      shouldPollCreations(true, true, [{ status: "submission_uncertain" }]),
+    ).toBe(3000);
     expect(shouldPollCreations(true, true, undefined)).toBe(false);
   });
 });
@@ -64,10 +67,13 @@ describe("render detail polling rules", () => {
     expect(shouldPollRender(false, false, "queued")).toBe(false);
   });
 
-  it("stops polling on terminal status ready, failed, or submission_uncertain", () => {
+  it("stops polling on terminal status ready or failed", () => {
     expect(shouldPollRender(true, true, "ready")).toBe(false);
     expect(shouldPollRender(true, true, "failed")).toBe(false);
-    expect(shouldPollRender(true, true, "submission_uncertain")).toBe(false);
+  });
+
+  it("polls with relaxed 5000ms interval for submission_uncertain recovery", () => {
+    expect(shouldPollRender(true, true, "submission_uncertain")).toBe(5000);
   });
 
   it("polls every 2000ms when in progress, focused, and foregrounded", () => {

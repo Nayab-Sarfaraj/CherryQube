@@ -9,6 +9,7 @@ import {
 import type { InvitationInput } from "../modules/invitations/invitation.schema";
 import type { RenderTier } from "../modules/renders/render.model";
 import { remotionLambdaConfig } from "../lib/config";
+import { log } from "../lib/logger";
 
 export interface LambdaRenderProgress {
   done: boolean;
@@ -71,7 +72,10 @@ export function createRemotionLambdaClient(): LambdaRenderClient {
         codec: "h264",
         scale: tier === "hd" ? 1 : 2 / 3,
         privacy: "public",
-        outName: outputKey ?? `renders/${input.templateId}-${Date.now()}.mp4`,
+        enableCancellation: true,
+        outName: outputKey
+          ? { bucketName, key: outputKey }
+          : `renders/${input.templateId}-${Date.now()}.mp4`,
       });
 
       return { renderId: result.renderId, bucketName: result.bucketName };
@@ -91,8 +95,13 @@ export function createRemotionLambdaClient(): LambdaRenderClient {
           return { exists: false };
         }
         return { exists: true, url };
-      } catch {
-        return { exists: false };
+      } catch (error) {
+        log("error", "remotion.s3.check_output_failed", {
+          outputKey,
+          bucket: targetBucket,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
       }
     },
 
@@ -115,7 +124,9 @@ export function createRemotionLambdaClient(): LambdaRenderClient {
         inputProps,
         imageFormat: "png",
         privacy: "public",
-        outName: posterKey ?? `posters/${input.templateId}-${Date.now()}.png`,
+        outName: posterKey
+          ? { bucketName, key: posterKey }
+          : `posters/${input.templateId}-${Date.now()}.png`,
       });
 
       return result.url;

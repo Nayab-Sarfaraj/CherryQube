@@ -120,12 +120,7 @@ export const paidRenderRepository = {
         : {
             _id: id,
             tier: "hd" as const,
-            status: {
-              $in: [
-                "submission_uncertain" as const,
-                "rendering" as const,
-              ],
-            },
+            status: "rendering" as const,
             attemptId,
           };
       const job = await Render.findOne(filter).session(session).lean();
@@ -139,6 +134,32 @@ export const paidRenderRepository = {
             error: expired
               ? "Rendering timed out. Your export credit was returned."
               : "The video could not be rendered. Your export credit was returned.",
+          },
+        },
+        { session },
+      );
+    });
+  },
+  async failLambdaStart(id: string, attemptId: string, error?: string) {
+    await connectDb();
+    return billingTransaction(async (session) => {
+      const filter = {
+        _id: id,
+        tier: "hd" as const,
+        status: "submission_uncertain" as const,
+        attemptId,
+      };
+      const job = await Render.findOne(filter).session(session).lean();
+      if (!job) return { modifiedCount: 0 };
+      await refund(session, job);
+      return Render.updateOne(
+        filter,
+        {
+          $set: {
+            status: "failed",
+            error:
+              error ||
+              "The video could not be started. Your export credit was returned.",
           },
         },
         { session },

@@ -29,6 +29,7 @@ export interface RenderRecord {
   submittedAt?: Date;
   startedAt?: Date;
   completedAt?: Date;
+  lastReconciledAt?: Date;
   elapsedMs?: number;
   createdAt: Date;
   updatedAt: Date;
@@ -67,12 +68,14 @@ const schema = new Schema<RenderRecord>(
     submittedAt: Date,
     startedAt: Date,
     completedAt: Date,
+    lastReconciledAt: Date,
     elapsedMs: Number,
   },
   { timestamps: true },
 );
 schema.index({ status: 1, startedAt: 1 });
 schema.index({ status: 1, updatedAt: 1 });
+schema.index({ status: 1, lastReconciledAt: 1, updatedAt: 1 });
 schema.index({ ownerClerkId: 1, propsHash: 1 }, { unique: true });
 export const Render =
   (mongoose.models.Render as mongoose.Model<RenderRecord>) ||

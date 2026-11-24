@@ -12,8 +12,8 @@ export async function copyToClipboard(text: string): Promise<boolean> {
   if (!text) return false;
   try {
     if (expoClipboard && typeof expoClipboard.setStringAsync === "function") {
-      await expoClipboard.setStringAsync(text);
-      return true;
+      const result = await expoClipboard.setStringAsync(text);
+      return typeof result === "boolean" ? result : true;
     }
   } catch {
     // Fallback if native call fails

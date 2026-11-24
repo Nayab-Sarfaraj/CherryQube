@@ -110,12 +110,16 @@ function Controls({
     );
   return (
     <section aria-label="Save and export" className="mt-6 space-y-3">
-      {paidExportsEnabled && (
+      {paidExportsEnabled ? (
         <ExportQualityOptions
           quality={quality}
           onChange={setQuality}
           disabled={busy}
         />
+      ) : (
+        <p className="text-sm opacity-80">
+          Exports are generated in 720p with a watermark.
+        </p>
       )}
       <div className="flex flex-wrap gap-3">
         <button

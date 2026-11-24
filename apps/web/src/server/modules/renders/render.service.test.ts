@@ -823,6 +823,7 @@ describe("render safeguards", () => {
       get: vi.fn().mockImplementation(async () => ({ ...record })),
       sweep: vi.fn().mockResolvedValue(undefined),
       findUncertainJobs: vi.fn().mockImplementation(async () => [record]),
+      touchUncertainJob: vi.fn().mockResolvedValue(undefined),
       recoverUncertainJob: vi.fn(
         async (
           jobId: string,
@@ -854,6 +855,7 @@ describe("render safeguards", () => {
       limit: vi.fn(),
       checkPhoto: vi.fn(),
       bindResult: vi.fn(),
+      publishResults: vi.fn().mockResolvedValue(undefined),
       reserveHd: vi.fn(),
       environment: () => "sandbox" as const,
       isLambdaEnabled: () => true,
