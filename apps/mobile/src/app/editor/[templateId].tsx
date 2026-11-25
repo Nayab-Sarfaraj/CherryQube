@@ -32,7 +32,9 @@ export default function EditorRoute() {
       return;
     }
     if (isSignedIn) {
-      if (auth.status !== "ready" && auth.status !== "handoff-pending") {
+      if (auth.status === "loading") {
+        dispatch({ type: "NATIVE_SESSION_AVAILABLE" });
+      } else if (auth.status === "signing-in") {
         dispatch({ type: "NATIVE_SIGNED_IN" });
       }
     } else if (auth.status !== "signed-out" && auth.status !== "signing-in") {

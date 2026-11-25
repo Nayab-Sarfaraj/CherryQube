@@ -21,12 +21,12 @@ describe("mobileAuthReducer", () => {
     );
   });
 
-  it("moves an already authenticated cold start into handoff-pending", () => {
-    const readyForHandoff = mobileAuthReducer(initialMobileAuthState, {
-      type: "NATIVE_SIGNED_IN",
+  it("keeps an already authenticated cold start out of the WebView handoff", () => {
+    const readyForPreview = mobileAuthReducer(initialMobileAuthState, {
+      type: "NATIVE_SESSION_AVAILABLE",
     });
-    expect(readyForHandoff).toMatchObject({
-      status: "handoff-pending",
+    expect(readyForPreview).toMatchObject({
+      status: "ready",
       error: null,
     });
   });
