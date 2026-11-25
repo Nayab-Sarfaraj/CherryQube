@@ -76,6 +76,7 @@ export function createRemotionLambdaClient(): LambdaRenderClient {
         outName: outputKey
           ? { bucketName, key: outputKey }
           : `renders/${input.templateId}-${Date.now()}.mp4`,
+        concurrency: 5,
       });
 
       return { renderId: result.renderId, bucketName: result.bucketName };
