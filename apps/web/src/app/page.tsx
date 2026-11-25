@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { templates } from "@greetings/remotion/templates";
 import { TemplatePicker } from "@/features/template-picker";
 import { EmbedMarker } from "@/components/embed-marker";
@@ -26,7 +27,17 @@ export default async function Home({
   return (
     <main className="mx-auto max-w-5xl px-6 py-16">
       {embed === "1" && <EmbedMarker />}
-      <p className="font-medium text-accent">CherryQube</p>
+      <div className="flex items-center gap-2.5">
+        <Image
+          src="/icon.png"
+          alt="CherryQube"
+          width={32}
+          height={32}
+          priority
+          className="rounded-lg shadow-sm"
+        />
+        <p className="font-medium text-accent">CherryQube</p>
+      </div>
       <h1 className="mt-4 max-w-3xl font-display text-5xl leading-tight sm:text-7xl">
         Make this season feel personal.
       </h1>
