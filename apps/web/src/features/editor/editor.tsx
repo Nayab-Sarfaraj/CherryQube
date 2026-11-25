@@ -22,6 +22,8 @@ import {
   parseNativeToWebBridgeMessage,
 } from "@greetings/shared";
 import { SaveControls } from "./save-controls";
+import { DateTimeField } from "./date-time-field";
+import { ReplyContactReminder } from "./reply-contact-reminder";
 import { MessageWriter } from "../messages/message-writer";
 import type { SavedInvitation } from "./use-invitations";
 import { EmbedMarker } from "@/components/embed-marker";
@@ -38,7 +40,6 @@ const labels: Record<string, string> = {
   message: "Message",
   eventTitle: "Event title",
   hostName: "Host name",
-  dateTime: "Date and time",
   locationText: "Location",
   mapUrl: "Map URL",
 };
@@ -59,8 +60,7 @@ export default function Editor({
   initial?: SavedInvitation;
   embed?: boolean;
 }) {
-  const aiWriterEnabled =
-    process.env.NEXT_PUBLIC_ENABLE_AI_WRITER === "true";
+  const aiWriterEnabled = process.env.NEXT_PUBLIC_ENABLE_AI_WRITER === "true";
   const template = getTemplate(templateId)!;
   const [fields, setFields] = useState<VideoProps>(
     initial?.props ?? template.defaultProps,
@@ -265,6 +265,9 @@ export default function Editor({
           <Preview templateId={templateId} props={previewProps} />
         </section>
         <section className="space-y-5">
+          {template.type === "invitation" && contactError && (
+            <ReplyContactReminder method={contactMethod} />
+          )}
           <SaveControls
             input={{
               templateId,
@@ -296,6 +299,15 @@ export default function Editor({
             const value = String(
               (fields as unknown as Record<string, unknown>)[key] ?? "",
             );
+            if (key === "dateTime")
+              return (
+                <DateTimeField
+                  key={`${key}-${ready}`}
+                  value={value}
+                  error={errors[key]}
+                  onChange={(next) => update(key, next)}
+                />
+              );
             return (
               <div key={key}>
                 <label htmlFor={key} className="block font-medium">
@@ -315,13 +327,7 @@ export default function Editor({
                     id={key}
                     value={value}
                     maxLength={limits[key]}
-                    type={
-                      key === "dateTime"
-                        ? "text"
-                        : key === "mapUrl"
-                          ? "url"
-                          : "text"
-                    }
+                    type={key === "mapUrl" ? "url" : "text"}
                     onChange={(event) => update(key, event.target.value)}
                     className="mt-2 w-full rounded-lg border border-ink/40 bg-white p-3"
                   />
@@ -355,12 +361,6 @@ export default function Editor({
                     }
                     onSelect={(message) => update("message", message)}
                   />
-                )}
-                {key === "dateTime" && (
-                  <p className="mt-1 text-sm">
-                    Use ISO date, time, and offset, for example
-                    2026-11-26T18:00:00-05:00.
-                  </p>
                 )}
               </div>
             );
@@ -397,9 +397,14 @@ export default function Editor({
           </div>
           {template.type === "invitation" && (
             <div className="rounded-xl border border-ink/30 p-4">
-              <label htmlFor="contact-method" className="block font-medium">
-                How guests can reply
-              </label>
+              <div className="flex flex-wrap items-baseline gap-x-2">
+                <label htmlFor="contact-method" className="font-medium">
+                  How guests can reply
+                </label>
+                <span className="text-sm text-accent">
+                  Required to save or export
+                </span>
+              </div>
               <select
                 id="contact-method"
                 value={contactMethod}
