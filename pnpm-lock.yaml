@@ -165,6 +165,12 @@ importers:
 
   apps/web:
     dependencies:
+      '@aws-sdk/client-s3':
+        specifier: ^3.1176.0
+        version: 3.1176.0
+      '@aws-sdk/s3-request-presigner':
+        specifier: ^3.1176.0
+        version: 3.1176.0
       '@clerk/nextjs':
         specifier: ^7.9.23
         version: 7.9.23(next@16.4.6(@babel/core@7.29.7(supports-color@8.1.1))(@types/node@24.19.2)(babel-plugin-macros@3.1.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -348,6 +354,10 @@ packages:
   '@aws-crypto/util@5.2.0':
     resolution: {integrity: sha512-4RkU9EsI6ZpBve5fseQlGNUWKMa1RLPQ1dnjnQoe07ldfIzcsGb5hC5W0Dm7u423KWzawlrpbjXBrXCEv9zazQ==}
 
+  '@aws-sdk/checksums@3.1002.6':
+    resolution: {integrity: sha512-OgxgE64MkHNGtt7YJc2Q+d1maGnYcEkCw5r+UO7cM78iVzyMhXFVMgm5un1FZzk4XB8lv436zYduIWLH9ibdBg==}
+    engines: {node: '>=20.0.0'}
+
   '@aws-sdk/client-cloudwatch-logs@3.986.0':
     resolution: {integrity: sha512-i1rpVE4gn7t1lakamh2EfePKJrG2sJM8y3o9xsEzm33oDpWWERUWO/ojB4gBAF1oCguMDqkL2l3cFJKtz0PivQ==}
     engines: {node: '>=20.0.0'}
@@ -358,6 +368,10 @@ packages:
 
   '@aws-sdk/client-lambda@3.986.0':
     resolution: {integrity: sha512-R0VrqSH622b0MmIULLCNbupyU9qqEn+vofIeKng+ALPJY6U7pq7MG0p+bbxLCGztLl0u2vmO237SPZYcFm3hCQ==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/client-s3@3.1176.0':
+    resolution: {integrity: sha512-ZD0T/34Rx8cyCF7KjT9DpKbeeUjPvdDTgcOzdn/NOHQIQ3GdMc7NIdfea3GUBI+rFaxvlLsQ4auV1eNR8pvkAQ==}
     engines: {node: '>=20.0.0'}
 
   '@aws-sdk/client-s3@3.986.0':
@@ -464,6 +478,10 @@ packages:
 
   '@aws-sdk/region-config-resolver@3.972.63':
     resolution: {integrity: sha512-cgNXvwYLsCsMYnnQX2PcO1zRvKuYbt5/Ns4FCHKhZB04J76TWTrNGkasjANnpETOQtFNHt0zG1W5RjzAYZWcyA==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/s3-request-presigner@3.1176.0':
+    resolution: {integrity: sha512-vpl9t65TJ3dXZpJtEcRPkca/JzadGFbzjDZvXg9fn/eE/TpBp66fOkLTnputHfdvdDKIOjzp2B8SjlZZhxsLiQ==}
     engines: {node: '>=20.0.0'}
 
   '@aws-sdk/s3-request-presigner@3.986.0':
@@ -7035,6 +7053,14 @@ snapshots:
       '@smithy/util-utf8': 2.3.0
       tslib: 2.9.1
 
+  '@aws-sdk/checksums@3.1002.6':
+    dependencies:
+      '@aws-sdk/core': 3.981.1
+      '@aws-sdk/types': 3.975.1
+      '@smithy/core': 3.41.0
+      '@smithy/types': 4.20.0
+      tslib: 2.9.1
+
   '@aws-sdk/client-cloudwatch-logs@3.986.0':
     dependencies:
       '@aws-crypto/sha256-browser': 5.2.0
@@ -7168,6 +7194,20 @@ snapshots:
       '@smithy/util-stream': 4.8.2
       '@smithy/util-utf8': 4.5.2
       '@smithy/util-waiter': 4.6.2
+      tslib: 2.9.1
+
+  '@aws-sdk/client-s3@3.1176.0':
+    dependencies:
+      '@aws-sdk/checksums': 3.1002.6
+      '@aws-sdk/core': 3.981.1
+      '@aws-sdk/credential-provider-node': 3.972.98
+      '@aws-sdk/middleware-sdk-s3': 3.972.91
+      '@aws-sdk/signature-v4-multi-region': 3.996.52
+      '@aws-sdk/types': 3.975.1
+      '@smithy/core': 3.41.0
+      '@smithy/fetch-http-handler': 5.8.1
+      '@smithy/node-http-handler': 4.14.2
+      '@smithy/types': 4.20.0
       tslib: 2.9.1
 
   '@aws-sdk/client-s3@3.986.0':
@@ -7503,6 +7543,15 @@ snapshots:
   '@aws-sdk/region-config-resolver@3.972.63':
     dependencies:
       '@aws-sdk/core': 3.981.1
+      tslib: 2.9.1
+
+  '@aws-sdk/s3-request-presigner@3.1176.0':
+    dependencies:
+      '@aws-sdk/core': 3.981.1
+      '@aws-sdk/signature-v4-multi-region': 3.996.52
+      '@aws-sdk/types': 3.975.1
+      '@smithy/core': 3.41.0
+      '@smithy/types': 4.20.0
       tslib: 2.9.1
 
   '@aws-sdk/s3-request-presigner@3.986.0':

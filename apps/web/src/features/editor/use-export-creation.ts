@@ -31,15 +31,44 @@ export function useExportCreation(
       photoUrl = photos.current.get(photo);
       if (!photoUrl) {
         const blob = await (await fetch(photo)).blob();
-        const form = new FormData();
-        form.append(
-          "photo",
-          new File([blob], "photo.jpg", { type: "image/jpeg" }),
-        );
-        const response = await fetch("/api/uploads", {
+        const file = new File([blob], "photo.jpg", { type: "image/jpeg" });
+        const start = await fetch("/api/uploads", {
           method: "POST",
-          body: form,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "start",
+            contentType: file.type,
+            size: file.size,
+          }),
         });
+        const ticket = (await start.json()) as {
+          key?: string;
+          uploadUrl?: string;
+        };
+        const { key, uploadUrl } = ticket;
+        const response =
+          key && uploadUrl
+            ? await (async () => {
+                const uploaded = await fetch(uploadUrl, {
+                  method: "PUT",
+                  headers: { "Content-Type": file.type },
+                  body: file,
+                });
+                if (!uploaded.ok) throw new Error("Photo upload failed");
+                return fetch("/api/uploads", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ action: "complete", key }),
+                });
+              })()
+            : await fetch("/api/uploads", {
+                method: "POST",
+                body: (() => {
+                  const form = new FormData();
+                  form.append("photo", file);
+                  return form;
+                })(),
+              });
         const body = await response.json();
         if (!response.ok)
           throw new Error(body.error?.message ?? "Photo upload failed");

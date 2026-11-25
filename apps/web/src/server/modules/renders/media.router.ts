@@ -1,4 +1,4 @@
-import { readMedia } from "../../integrations/local-storage.client";
+import { readMedia } from "../../integrations/storage.client";
 export async function get(
   request: Request,
   context: { params: Promise<{ key: string[] }> },

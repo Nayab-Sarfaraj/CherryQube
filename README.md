@@ -145,14 +145,15 @@ Configure `EXPO_PUBLIC_WEB_ORIGIN` and `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` in `a
 - `docs/stage-8.md` — Guests, CSV import, `/i/[token]` links, RSVP deep links
 - `docs/stage-9.md` — Remaining themes (Christmas, New Year's Eve) and polish
 - `docs/cost-benchmarks.md` — Local render timings
+- `docs/backlog.md` — Deferred S3, Lambda, concurrency, security, and release-readiness work
 
-## Still deployment work
+## Deferred deployment work
 
-- Provision the Remotion Lambda site/function and S3 bucket, then add the required production environment variables
-- Replace the local upload adapter with S3 presigned uploads and lifecycle rules
-- Measure Lambda cost, add an AWS budget alarm, and set an appropriate Lambda concurrency limit
-- Fix the current `/mobile-auth` production-build Suspense boundary before Vercel deployment
-- Decide when to enable Polar checkout and paid HD exports; until then, keep `NEXT_PUBLIC_ENABLE_PAID_EXPORTS=false`
+See [`docs/backlog.md`](docs/backlog.md) for the tracked production-storage,
+Lambda, concurrency, security, validation, and documentation work. Keep
+`NEXT_PUBLIC_ENABLE_PAID_EXPORTS=false` until Polar checkout and paid HD
+exports are explicitly enabled.
+
 - Decide when to expose the AI writer; until then, keep `NEXT_PUBLIC_ENABLE_AI_WRITER=false`
 - Real-device QA: link previews in WhatsApp/iMessage/X, RSVP prefill on iPhone and Android, WebView auth handoff on a physical device
 - RevenueCat / Google Play Billing and Play Store release
