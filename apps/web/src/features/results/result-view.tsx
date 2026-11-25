@@ -3,28 +3,23 @@ import Link from "next/link";
 import type { PublicResult } from "@greetings/shared";
 import { useResult } from "./use-result";
 import { ShareActions } from "./share-actions";
+import { PublicVideo } from "./public-video";
 export function ResultView({ initial }: { initial: PublicResult }) {
   const query = useResult(initial);
   const result = query.data;
   return (
-    <main className="mx-auto max-w-3xl px-5 py-10">
+    <main className="mx-auto max-w-xl px-5 py-10 sm:py-14">
       <h1 className="font-display text-4xl leading-tight">{result.title}</h1>
       <div className="mt-8">
         {result.status === "ready" && result.videoUrl ? (
           <>
-            <video
-              key={result.videoUrl}
-              src={result.videoUrl}
-              poster={result.posterUrl}
-              autoPlay
-              muted
-              playsInline
-              controls
-              preload="metadata"
-              aria-label={result.title}
-              className="mx-auto max-h-[75vh] w-full rounded-xl bg-ink"
-            />
-            <p className="mt-2 text-sm">Use the sound control to unmute.</p>
+            <div className="mx-auto w-full max-w-[454px] rounded-[28px] bg-white p-3 shadow-lg">
+              <PublicVideo
+                src={result.videoUrl}
+                poster={result.posterUrl}
+                title={result.title}
+              />
+            </div>
             <ShareActions
               id={result.shareId}
               title={result.title}
