@@ -2,6 +2,7 @@ import { readUploadForm } from "../../lib/read-upload";
 import { requireUser } from "../../middleware/auth";
 import { errorResponse, ValidationError } from "../../lib/errors";
 import { s3StorageEnabled } from "../../integrations/storage.client";
+import { log } from "../../lib/logger";
 import {
   beginS3PhotoUpload,
   completeS3PhotoUpload,
@@ -47,6 +48,11 @@ export async function create(request: Request) {
       { status: 201 },
     );
   } catch (error) {
+    log("error", "upload.failed", {
+      error:
+        error instanceof Error ? error.message.slice(0, 500) : "unknown",
+      s3Enabled: s3StorageEnabled,
+    });
     return errorResponse(error);
   }
 }

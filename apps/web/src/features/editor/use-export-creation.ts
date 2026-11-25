@@ -41,34 +41,45 @@ export function useExportCreation(
             size: file.size,
           }),
         });
-        const ticket = (await start.json()) as {
+        const ticket = ((await start.json().catch(() => null)) ?? {}) as {
           key?: string;
           uploadUrl?: string;
+          error?: { code?: string; message?: string };
         };
         const { key, uploadUrl } = ticket;
-        const response =
-          key && uploadUrl
-            ? await (async () => {
-                const uploaded = await fetch(uploadUrl, {
-                  method: "PUT",
-                  headers: { "Content-Type": file.type },
-                  body: file,
-                });
-                if (!uploaded.ok) throw new Error("Photo upload failed");
-                return fetch("/api/uploads", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ action: "complete", key }),
-                });
-              })()
-            : await fetch("/api/uploads", {
-                method: "POST",
-                body: (() => {
-                  const form = new FormData();
-                  form.append("photo", file);
-                  return form;
-                })(),
+        const localStorageFallback =
+          start.status === 400 &&
+          ticket.error?.code === "VALIDATION_ERROR" &&
+          ticket.error.message === "Choose a photo";
+        if (!start.ok && !localStorageFallback)
+          throw new Error(
+            ticket.error?.message ?? "Could not start photo upload. Try again.",
+          );
+        if (start.ok && (!key || !uploadUrl))
+          throw new Error("Could not start photo upload. Try again.");
+
+        const response = start.ok
+          ? await (async () => {
+              const uploaded = await fetch(uploadUrl!, {
+                method: "PUT",
+                headers: { "Content-Type": file.type },
+                body: file,
               });
+              if (!uploaded.ok) throw new Error("Photo upload failed");
+              return fetch("/api/uploads", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action: "complete", key }),
+              });
+            })()
+          : await fetch("/api/uploads", {
+              method: "POST",
+              body: (() => {
+                const form = new FormData();
+                form.append("photo", file);
+                return form;
+              })(),
+            });
         const body = await response.json();
         if (!response.ok)
           throw new Error(body.error?.message ?? "Photo upload failed");
