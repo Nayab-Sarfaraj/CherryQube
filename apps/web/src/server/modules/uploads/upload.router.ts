@@ -9,6 +9,7 @@ import {
   uploadPhoto,
 } from "./upload.service";
 export async function create(request: Request) {
+  let operation = "request";
   try {
     const owner = await requireUser();
     if (
@@ -25,16 +26,29 @@ export async function create(request: Request) {
         body.action === "start" &&
         typeof body.contentType === "string" &&
         typeof body.size === "number"
-      )
-        return Response.json(
-          await beginS3PhotoUpload(owner, body.contentType, body.size),
+      ) {
+        operation = "s3.start";
+        log("info", "upload.s3.start", { s3Enabled: true });
+        const ticket = await beginS3PhotoUpload(
+          owner,
+          body.contentType,
+          body.size,
         );
-      if (body.action === "complete" && typeof body.key === "string")
-        return Response.json(await completeS3PhotoUpload(owner, body.key), {
+        log("info", "upload.s3.ticket-issued", { s3Enabled: true });
+        return Response.json(ticket);
+      }
+      if (body.action === "complete" && typeof body.key === "string") {
+        operation = "s3.complete";
+        log("info", "upload.s3.complete", { s3Enabled: true });
+        const photo = await completeS3PhotoUpload(owner, body.key);
+        log("info", "upload.s3.completed", { s3Enabled: true });
+        return Response.json(photo, {
           status: 201,
         });
+      }
       throw new ValidationError("Invalid upload request");
     }
+    operation = "local-form";
     if (Number(request.headers.get("content-length") ?? 0) > 9 * 1024 * 1024)
       throw new ValidationError("Photo is too large");
     const file = (await readUploadForm(request)).get("photo");
@@ -51,6 +65,7 @@ export async function create(request: Request) {
     log("error", "upload.failed", {
       error:
         error instanceof Error ? error.message.slice(0, 500) : "unknown",
+      operation,
       s3Enabled: s3StorageEnabled,
     });
     return errorResponse(error);
