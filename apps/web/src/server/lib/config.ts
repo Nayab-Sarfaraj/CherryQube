@@ -53,6 +53,29 @@ export function localRenderConfig() {
   };
 }
 
+const s3UploadsSchema = z.object({
+  bucketName: z.string().regex(/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/),
+  region: z.string().regex(/^[a-z]{2}(?:-gov)?-[a-z]+-\d$/),
+});
+export type S3UploadsConfig = z.infer<typeof s3UploadsSchema>;
+
+export function s3UploadsEnabled() {
+  return Boolean(process.env.S3_UPLOADS_BUCKET);
+}
+
+export function s3UploadsConfig(): S3UploadsConfig | null {
+  if (!s3UploadsEnabled()) return null;
+  const result = s3UploadsSchema.safeParse({
+    bucketName: process.env.S3_UPLOADS_BUCKET,
+    region: process.env.AWS_REGION ?? "us-east-1",
+  });
+  if (!result.success)
+    throw new Error(
+      `Invalid S3 uploads configuration: ${result.error.issues.map((issue) => issue.path.join(".")).join(", ")}`,
+    );
+  return result.data;
+}
+
 const packSchema = z.object({
   id: z.string().regex(/^[a-z0-9-]{1,40}$/),
   productId: z.uuid(),

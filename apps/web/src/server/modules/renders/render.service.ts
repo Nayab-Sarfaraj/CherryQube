@@ -11,7 +11,7 @@ import { createHash } from "node:crypto";
 import { invitationService } from "../invitations/invitation.service";
 import { renderRepository } from "./render.repository";
 import { invitationInput } from "../invitations/invitation.schema";
-import { assertOwnedPhoto } from "../../integrations/local-storage.client";
+import { assertOwnedPhoto } from "../../integrations/storage.client";
 import { createRemotionLambdaClient } from "../../integrations/remotion-lambda.client";
 import { log } from "../../lib/logger";
 import {

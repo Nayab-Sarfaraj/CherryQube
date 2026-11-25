@@ -1,22 +1,22 @@
 import { entitlementRepository } from "../entitlements/entitlement.repository";
+import { removeOwnerPhotos } from "../../integrations/storage.client";
 import { rm } from "node:fs/promises";
 import path from "node:path";
 import { localRenderConfig } from "../../lib/config";
-import { ownerPrefix } from "../../integrations/local-storage.client";
 import { accountRepository } from "./account.repository";
 export async function purgeAccount(owner: string) {
   await entitlementRepository.detach(owner);
   const hashes = await accountRepository.remove(owner);
+  await removeOwnerPhotos(owner);
   const root = path.resolve(localRenderConfig().root);
-  await rm(path.join(root, "photos", ownerPrefix(owner)), {
-    recursive: true,
-    force: true,
-  });
-  for (const hash of hashes) {
-    if (/^[a-f0-9]{64}$/.test(hash))
-      await rm(path.join(root, "renders", hash), {
-        recursive: true,
-        force: true,
-      });
-  }
+  await Promise.all(
+    hashes
+      .filter((hash) => /^[a-f0-9]{64}$/.test(hash))
+      .map((hash) =>
+        rm(path.join(root, "renders", hash), {
+          recursive: true,
+          force: true,
+        }),
+      ),
+  );
 }
