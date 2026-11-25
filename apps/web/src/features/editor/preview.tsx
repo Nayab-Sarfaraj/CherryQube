@@ -9,6 +9,8 @@ import {
 } from "@greetings/remotion";
 import { FPS, VIDEO_SIZE } from "@greetings/shared";
 
+const emptySubscribe = () => () => {};
+
 function subscribeReducedMotion(callback: () => void) {
   if (typeof window === "undefined" || !window.matchMedia) return () => {};
   const query = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -26,11 +28,11 @@ export default function Preview({
   const template = getTemplate(templateId)!;
   const player = useRef<PlayerRef>(null);
   const [muted, setMuted] = useState(true);
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
+  const isMounted = useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false,
+  );
 
   const reducedMotion = useSyncExternalStore(
     subscribeReducedMotion,
