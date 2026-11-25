@@ -1,6 +1,6 @@
 "use client";
 
-import { useSignIn } from "@clerk/nextjs/legacy";
+import { useAuth, useClerk } from "@clerk/nextjs";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { safeMobileReturnPath } from "./return-path";
@@ -16,7 +16,8 @@ function nativeMessage(type: "AUTH_HANDOFF_COMPLETE" | "REQUEST_AUTH") {
 }
 
 function MobileAuthContent() {
-  const { isLoaded, signIn, setActive } = useSignIn();
+  const { isLoaded, isSignedIn } = useAuth();
+  const { client, setActive } = useClerk();
   const params = useSearchParams();
   const [error, setError] = useState("");
   const ticket = params.get("ticket");
@@ -34,13 +35,19 @@ function MobileAuthContent() {
   const redemptionStarted = useRef(false);
 
   useEffect(() => {
-    if (!ticket || !isLoaded || !signIn || !setActive) return;
+    if (!isLoaded) return;
+    if (isSignedIn) {
+      nativeMessage("AUTH_HANDOFF_COMPLETE");
+      window.location.replace(target);
+      return;
+    }
+    if (!ticket || !client || !setActive) return;
     if (redemptionStarted.current) return;
     redemptionStarted.current = true;
 
     void (async () => {
       try {
-        const result = await signIn.create({ strategy: "ticket", ticket });
+        const result = await client.signIn.create({ strategy: "ticket", ticket });
         if (!result.createdSessionId) throw new Error("Ticket not accepted");
         await setActive({ session: result.createdSessionId });
         nativeMessage("AUTH_HANDOFF_COMPLETE");
@@ -49,7 +56,7 @@ function MobileAuthContent() {
         setError("This sign-in link expired. Return to the app and try again.");
       }
     })();
-  }, [isLoaded, setActive, signIn, target, ticket]);
+  }, [client, isLoaded, isSignedIn, setActive, target, ticket]);
 
   const displayError =
     error ||

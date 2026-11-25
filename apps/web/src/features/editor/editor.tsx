@@ -1,7 +1,16 @@
 "use client";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import Preview from "./preview";
+const Preview = dynamic(() => import("./preview"), {
+  ssr: false,
+  loading: () => (
+    <div
+      className="aspect-[9/16] w-full rounded-2xl bg-ink/10 animate-pulse flex items-center justify-center text-sm text-ink/60"
+      aria-hidden="true"
+    />
+  ),
+});
 import {
   cardSchema,
   getTemplate,

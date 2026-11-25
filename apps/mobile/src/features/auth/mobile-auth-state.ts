@@ -14,6 +14,7 @@ export type MobileAuthState = {
 
 export type MobileAuthAction =
   | { type: "NATIVE_LOADING" }
+  | { type: "NATIVE_SESSION_AVAILABLE" }
   | { type: "SIGNED_OUT" }
   | { type: "REQUEST_SIGN_IN" }
   | { type: "NATIVE_SIGNED_IN" }
@@ -35,6 +36,8 @@ export function mobileAuthReducer(
   switch (action.type) {
     case "NATIVE_LOADING":
       return initialMobileAuthState;
+    case "NATIVE_SESSION_AVAILABLE":
+      return { status: "ready", error: null, silentRetries: 0 };
     case "SIGNED_OUT":
       return { status: "signed-out", error: null, silentRetries: 0 };
     case "REQUEST_SIGN_IN":

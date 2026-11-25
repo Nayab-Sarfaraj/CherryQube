@@ -21,6 +21,16 @@ describe("mobileAuthReducer", () => {
     );
   });
 
+  it("keeps an already authenticated cold start out of the WebView handoff", () => {
+    const readyForPreview = mobileAuthReducer(initialMobileAuthState, {
+      type: "NATIVE_SESSION_AVAILABLE",
+    });
+    expect(readyForPreview).toMatchObject({
+      status: "ready",
+      error: null,
+    });
+  });
+
   it("counts silent renewal attempts", () => {
     const first = mobileAuthReducer(initialMobileAuthState, {
       type: "AUTH_EXPIRED",

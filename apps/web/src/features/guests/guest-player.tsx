@@ -1,7 +1,16 @@
 "use client";
+import dynamic from "next/dynamic";
 import { Component, type ReactNode } from "react";
 import type { VideoProps } from "@greetings/remotion/schema";
-import Preview from "../editor/preview";
+const Preview = dynamic(() => import("../editor/preview"), {
+  ssr: false,
+  loading: () => (
+    <div
+      className="aspect-[9/16] w-full rounded-2xl bg-ink/10 animate-pulse flex items-center justify-center text-sm text-ink/60"
+      aria-hidden="true"
+    />
+  ),
+});
 
 function Fallback({
   videoUrl,

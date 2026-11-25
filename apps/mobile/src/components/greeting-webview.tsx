@@ -12,6 +12,7 @@ import { shareCreation } from "@/lib/native-share";
 import { pickAndUploadPhoto } from "@/lib/photo-upload";
 import { mobileTheme } from "@/theme/theme";
 import {
+  CRYPTO_SUBTLE_POLYFILL_SCRIPT,
   parseWebToNativeBridgeMessage,
   type NativeToWebBridgeMessage,
 } from "@greetings/shared";
@@ -96,11 +97,19 @@ export function GreetingWebView({
   const { getToken, isSignedIn } = useMobileAuth();
   const [error, setError] = useState("");
   const [ticket, setTicket] = useState<string | null>(null);
+  const [handoffDestination, setHandoffDestination] = useState<{
+    returnPath: string;
+    destination: string;
+  } | null>(null);
+  const destinationPath =
+    handoffDestination?.returnPath === path
+      ? handoffDestination.destination
+      : path;
   const source = useMemo(() => {
-    if (!ticket) return { uri: hostedUrl(path) };
+    if (!ticket) return { uri: hostedUrl(destinationPath) };
     const params = new URLSearchParams({ ticket, returnTo: path });
     return { uri: hostedUrl(`/mobile-auth?${params.toString()}`) };
-  }, [path, ticket]);
+  }, [destinationPath, path, ticket]);
   const send = useCallback((message: NativeToWebBridgeMessage) => {
     webViewRef.current?.postMessage(JSON.stringify(message));
   }, []);
@@ -180,8 +189,9 @@ export function GreetingWebView({
       if (parsed.data.type === "REQUEST_PAYWALL")
         setError("In-app purchases will be available in the next app update.");
       if (parsed.data.type === "REQUEST_AUTH") onRequestSignIn();
-      if (parsed.data.type === "AUTH_HANDOFF_COMPLETE")
+      if (parsed.data.type === "AUTH_HANDOFF_COMPLETE") {
         onAuthAction({ type: "HANDOFF_READY" });
+      }
       if (parsed.data.type === "REQUEST_SIGN_OUT") onSignOut();
       if (parsed.data.type === "EXPORT_REQUESTED")
         onExportRequested?.(parsed.data.invitationId, parsed.data.renderId);
@@ -209,13 +219,21 @@ export function GreetingWebView({
           WEB_ORIGIN,
           ...(CLERK_FRONTEND_ORIGIN ? [CLERK_FRONTEND_ORIGIN] : []),
         ]}
+        injectedJavaScriptBeforeContentLoaded={CRYPTO_SUBTLE_POLYFILL_SCRIPT}
         onShouldStartLoadWithRequest={handleNavigation}
         onNavigationStateChange={(state: WebViewNavigation) => {
           currentUrlRef.current = state.url;
           if (!isAllowed(state.url)) return;
           try {
-            if (new URL(state.url).searchParams.get("nativeSession") === "1")
+            if (new URL(state.url).searchParams.get("nativeSession") === "1") {
+              const destination = new URL(state.url);
+              setHandoffDestination({
+                returnPath: path,
+                destination: `${destination.pathname}${destination.search}${destination.hash}`,
+              });
+              setTicket(null);
               onAuthAction({ type: "HANDOFF_READY" });
+            }
           } catch {
             // Ignore malformed WebView URLs.
           }

@@ -17,15 +17,15 @@ export async function generateMetadata({ params }: Props) {
 export default async function GuestInvitationPage({ params }: Props) {
   const invitation = await readGuestInvitation((await params).token);
   return (
-    <main className="mx-auto max-w-3xl px-5 py-10">
+    <main className="mx-auto max-w-xl px-5 py-10 sm:py-14">
       <p className="text-sm uppercase tracking-[0.2em]">
         A personal invitation
       </p>
-      <h1 className="mt-2 font-display text-4xl leading-tight">
+      <h1 className="mt-2 break-words font-display text-4xl leading-tight sm:text-5xl">
         You’re invited, {invitation.guestName}
       </h1>
       <p className="mt-2 text-lg">{invitation.eventTitle}</p>
-      <div className="mt-8">
+      <div className="mt-8 mx-auto w-full max-w-[454px] rounded-[28px] bg-white p-3 shadow-lg">
         <GuestPlayer
           templateId={invitation.templateId}
           props={invitation.props}
