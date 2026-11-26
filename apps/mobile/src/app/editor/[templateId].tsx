@@ -103,7 +103,6 @@ export default function EditorRoute() {
         auth={auth}
         onAuthAction={dispatch}
         onRequestSignIn={requestSignIn}
-        onSilentRetryExhausted={requestSignIn}
         onSignOut={() => void finishSignOut()}
         onExportRequested={exported}
         onCloseEditor={leave}

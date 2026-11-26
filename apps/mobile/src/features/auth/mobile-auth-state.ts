@@ -10,6 +10,7 @@ export type MobileAuthState = {
   status: MobileAuthStatus;
   error: string | null;
   silentRetries: number;
+  handoffAttempt: number;
 };
 
 export type MobileAuthAction =
@@ -27,7 +28,27 @@ export const initialMobileAuthState: MobileAuthState = {
   status: "loading",
   error: null,
   silentRetries: 0,
+  handoffAttempt: 0,
 };
+
+export function actionForWebAuthStatus(
+  state: MobileAuthState,
+  nativeUserId: string | null,
+  webUserId: string | null,
+  awaitingEditorVerification: boolean,
+): MobileAuthAction | null {
+  if (nativeUserId && webUserId === nativeUserId)
+    return { type: "HANDOFF_READY" };
+  if (state.status === "signing-in" || state.status === "error") return null;
+  if (state.status === "handoff-pending" && !awaitingEditorVerification)
+    return null;
+  if (!nativeUserId) return { type: "SIGNED_OUT" };
+  if (state.silentRetries < 2) return { type: "AUTH_EXPIRED" };
+  return {
+    type: "HANDOFF_FAILED",
+    message: "Could not sync your account. Try again.",
+  };
+}
 
 export function mobileAuthReducer(
   state: MobileAuthState,
@@ -37,23 +58,36 @@ export function mobileAuthReducer(
     case "NATIVE_LOADING":
       return initialMobileAuthState;
     case "NATIVE_SESSION_AVAILABLE":
-      return { status: "ready", error: null, silentRetries: 0 };
+      return state.status === "loading"
+        ? { ...state, status: "ready", error: null, silentRetries: 0 }
+        : state;
     case "SIGNED_OUT":
-      return { status: "signed-out", error: null, silentRetries: 0 };
+      return {
+        ...state,
+        status: "signed-out",
+        error: null,
+        silentRetries: 0,
+      };
     case "REQUEST_SIGN_IN":
       return { ...state, status: "signing-in", error: null };
     case "NATIVE_SIGNED_IN":
-    case "AUTH_EXPIRED":
       return {
+        ...state,
         status: "handoff-pending",
         error: null,
-        silentRetries:
-          action.type === "AUTH_EXPIRED"
-            ? state.silentRetries + 1
-            : state.silentRetries,
+        silentRetries: 0,
+        handoffAttempt: state.handoffAttempt + 1,
+      };
+    case "AUTH_EXPIRED":
+      return {
+        ...state,
+        status: "handoff-pending",
+        error: null,
+        silentRetries: state.silentRetries + 1,
+        handoffAttempt: state.handoffAttempt + 1,
       };
     case "HANDOFF_READY":
-      return { status: "ready", error: null, silentRetries: 0 };
+      return { ...state, status: "ready", error: null, silentRetries: 0 };
     case "HANDOFF_FAILED":
       return { ...state, status: "error", error: action.message };
     case "RESET_SILENT_RETRIES":

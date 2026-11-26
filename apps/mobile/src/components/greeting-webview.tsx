@@ -1,6 +1,7 @@
-import type {
-  MobileAuthAction,
-  MobileAuthState,
+import {
+  actionForWebAuthStatus,
+  type MobileAuthAction,
+  type MobileAuthState,
 } from "@/features/auth/mobile-auth-state";
 import { useMobileAuth } from "@/hooks/use-mobile-auth";
 import {
@@ -71,7 +72,6 @@ type Props = {
   auth: MobileAuthState;
   onAuthAction: (action: MobileAuthAction) => void;
   onRequestSignIn: () => void;
-  onSilentRetryExhausted: () => void;
   onSignOut: () => void;
   onExportRequested?: (invitationId: string, renderId: string) => void;
   onCloseEditor?: () => void;
@@ -84,7 +84,6 @@ export function GreetingWebView({
   auth,
   onAuthAction,
   onRequestSignIn,
-  onSilentRetryExhausted,
   onSignOut,
   onExportRequested,
   onCloseEditor,
@@ -94,8 +93,10 @@ export function GreetingWebView({
 }: Props) {
   const webViewRef = useRef<WebView>(null);
   const currentUrlRef = useRef(hostedUrl(path));
-  const { getToken, isSignedIn } = useMobileAuth();
+  const { getToken, isLoaded, isSignedIn, userId } = useMobileAuth();
   const [error, setError] = useState("");
+  const pendingWebAuthStatusRef = useRef<string | null | undefined>(undefined);
+  const awaitingEditorVerificationRef = useRef(false);
   const [ticket, setTicket] = useState<string | null>(null);
   const [handoffDestination, setHandoffDestination] = useState<{
     returnPath: string;
@@ -123,6 +124,38 @@ export function GreetingWebView({
       );
     }
   }, [getToken, send]);
+
+  const handleWebAuthStatus = useCallback(
+    (webUserId: string | null) => {
+      if (isSignedIn && !userId) {
+        pendingWebAuthStatusRef.current = webUserId;
+        return;
+      }
+      const action = actionForWebAuthStatus(
+        auth,
+        isSignedIn ? userId : null,
+        webUserId,
+        awaitingEditorVerificationRef.current,
+      );
+      if (!action) return;
+      awaitingEditorVerificationRef.current = false;
+      if (action.type !== "HANDOFF_READY") setTicket(null);
+      onAuthAction(action);
+    },
+    [auth, isSignedIn, userId, onAuthAction],
+  );
+
+  useEffect(() => {
+    if (
+      !isLoaded ||
+      (isSignedIn && !userId) ||
+      pendingWebAuthStatusRef.current === undefined
+    )
+      return;
+    const webUserId = pendingWebAuthStatusRef.current;
+    pendingWebAuthStatusRef.current = undefined;
+    handleWebAuthStatus(webUserId);
+  }, [handleWebAuthStatus, isLoaded, isSignedIn, userId]);
 
   useEffect(() => {
     if (auth.status !== "handoff-pending" || !isSignedIn) return;
@@ -156,7 +189,7 @@ export function GreetingWebView({
     return () => {
       active = false;
     };
-  }, [auth.status, getToken, isSignedIn, onAuthAction]);
+  }, [auth.handoffAttempt, auth.status, getToken, isSignedIn, onAuthAction]);
 
   function handleNavigation(request: WebViewNavigation) {
     if (isAllowed(request.url) || isClerkHandshake(request.url)) return true;
@@ -189,20 +222,20 @@ export function GreetingWebView({
       if (parsed.data.type === "REQUEST_PAYWALL")
         setError("In-app purchases will be available in the next app update.");
       if (parsed.data.type === "REQUEST_AUTH") onRequestSignIn();
-      if (parsed.data.type === "AUTH_HANDOFF_COMPLETE") {
-        onAuthAction({ type: "HANDOFF_READY" });
-      }
       if (parsed.data.type === "REQUEST_SIGN_OUT") onSignOut();
       if (parsed.data.type === "EXPORT_REQUESTED")
         onExportRequested?.(parsed.data.invitationId, parsed.data.renderId);
       if (parsed.data.type === "CLOSE_EDITOR") onCloseEditor?.();
       if (parsed.data.type === "EDITOR_DIRTY_CHANGED")
         onDirtyChanged?.(parsed.data.dirty);
-      if (parsed.data.type === "AUTH_EXPIRED") {
-        setTicket(null);
-        if (!isSignedIn) onAuthAction({ type: "SIGNED_OUT" });
-        else if (auth.silentRetries < 2) onAuthAction({ type: "AUTH_EXPIRED" });
-        else onSilentRetryExhausted();
+      if (
+        parsed.data.type === "WEB_AUTH_STATUS" ||
+        parsed.data.type === "AUTH_EXPIRED"
+      ) {
+        const webUserId =
+          parsed.data.type === "WEB_AUTH_STATUS" ? parsed.data.userId : null;
+        if (!isLoaded) pendingWebAuthStatusRef.current = webUserId;
+        else handleWebAuthStatus(webUserId);
       }
     } catch {
       // Malformed and unknown messages are ignored deliberately.
@@ -232,7 +265,7 @@ export function GreetingWebView({
                 destination: `${destination.pathname}${destination.search}${destination.hash}`,
               });
               setTicket(null);
-              onAuthAction({ type: "HANDOFF_READY" });
+              awaitingEditorVerificationRef.current = true;
             }
           } catch {
             // Ignore malformed WebView URLs.
@@ -266,12 +299,16 @@ export function GreetingWebView({
           </View>
         )}
       />
-      {error && (
+      {(error || auth.error) && (
         <View style={styles.error} accessibilityLiveRegion="polite">
-          <Text style={styles.errorText}>{error}</Text>
+          <Text style={styles.errorText}>{auth.error || error}</Text>
           <Pressable
             accessibilityRole="button"
             onPress={() => {
+              if (auth.error) {
+                onRequestSignIn();
+                return;
+              }
               setError("");
               webViewRef.current?.reload();
             }}
