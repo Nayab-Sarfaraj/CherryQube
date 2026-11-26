@@ -3,7 +3,11 @@
 import { useEffect } from "react";
 import { useAuth } from "@clerk/nextjs";
 
-export function MobileAuthRequired() {
+export function MobileAuthRequired({
+  message = "Loading your account…",
+}: {
+  message?: string;
+}) {
   const { isLoaded, userId } = useAuth();
 
   useEffect(() => {
@@ -15,7 +19,7 @@ export function MobileAuthRequired() {
 
   return (
     <main className="flex min-h-dvh items-center justify-center px-6 text-center">
-      <p role="status">Loading your account…</p>
+      <p role="status">{message}</p>
     </main>
   );
 }

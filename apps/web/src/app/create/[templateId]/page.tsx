@@ -64,9 +64,13 @@ export default async function CreatePage({
       if (
         embed === "1" &&
         error instanceof AppError &&
-        (error.code === "UNAUTHENTICATED" || error.code === "FORBIDDEN")
+        (error.code === "UNAUTHENTICATED" || error.code === "NOT_FOUND")
       )
-        return <MobileAuthRequired />;
+        return error.code === "NOT_FOUND" ? (
+          <MobileAuthRequired message="This draft isn’t available to the current web account. If it belongs to your app account, your session will sync automatically; otherwise, it may have been deleted." />
+        ) : (
+          <MobileAuthRequired />
+        );
       throw error;
     }
   }

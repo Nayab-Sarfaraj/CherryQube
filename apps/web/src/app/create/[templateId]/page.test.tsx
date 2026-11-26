@@ -64,29 +64,30 @@ describe("embedded saved-draft authentication", () => {
     ).rejects.toMatchObject({ code: "UNAUTHENTICATED" });
   });
 
-  it("asks the native app to sync a mismatched account before retrying a forbidden embedded draft", async () => {
+  it("asks the native app to sync a mismatched account before retrying an unavailable embedded draft", async () => {
     vi.mocked(requireUser).mockResolvedValue("user-b");
     vi.mocked(invitationService.get).mockRejectedValue(
-      new AppError("FORBIDDEN", "Forbidden", 403),
+      new AppError("NOT_FOUND", "Not found", 404),
     );
     const page = await CreatePage({
       params,
       searchParams: Promise.resolve({ draft: "draft-1", embed: "1" }),
     });
     expect(page.type).toBe(MobileAuthRequired);
+    expect(page.props.message).toContain("may have been deleted");
     expect(invitationService.get).toHaveBeenCalledWith("user-b", "draft-1");
   });
 
-  it("continues to reject a forbidden draft outside the app WebView", async () => {
+  it("continues to reject a nonexistent draft outside the app WebView", async () => {
     vi.mocked(requireUser).mockResolvedValue("user-b");
     vi.mocked(invitationService.get).mockRejectedValue(
-      new AppError("FORBIDDEN", "Forbidden", 403),
+      new AppError("NOT_FOUND", "Not found", 404),
     );
     await expect(
       CreatePage({
         params,
         searchParams: Promise.resolve({ draft: "draft-1" }),
       }),
-    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 });
