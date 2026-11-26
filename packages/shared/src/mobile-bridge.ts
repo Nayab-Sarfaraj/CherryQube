@@ -7,7 +7,10 @@ export const webToNativeBridgeSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("PHOTO_PICKED"), request: z.literal(true) }),
   z.object({ type: z.literal("REQUEST_AUTH") }),
   z.object({ type: z.literal("AUTH_EXPIRED") }),
-  z.object({ type: z.literal("AUTH_HANDOFF_COMPLETE") }),
+  z.object({
+    type: z.literal("WEB_AUTH_STATUS"),
+    userId: z.string().min(1).max(255).nullable(),
+  }),
   z.object({ type: z.literal("REQUEST_SIGN_OUT") }),
   z.object({
     type: z.literal("REQUEST_SHARE"),

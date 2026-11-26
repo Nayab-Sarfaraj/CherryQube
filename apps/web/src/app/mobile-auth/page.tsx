@@ -11,7 +11,7 @@ declare global {
   }
 }
 
-function nativeMessage(type: "AUTH_HANDOFF_COMPLETE" | "REQUEST_AUTH") {
+function nativeMessage(type: "REQUEST_AUTH") {
   window.ReactNativeWebView?.postMessage(JSON.stringify({ type }));
 }
 
@@ -36,21 +36,19 @@ function MobileAuthContent() {
 
   useEffect(() => {
     if (!isLoaded) return;
-    if (isSignedIn) {
-      nativeMessage("AUTH_HANDOFF_COMPLETE");
-      window.location.replace(target);
-      return;
-    }
     if (!ticket || !client || !setActive) return;
     if (redemptionStarted.current) return;
     redemptionStarted.current = true;
 
     void (async () => {
       try {
-        const result = await client.signIn.create({ strategy: "ticket", ticket });
+        if (isSignedIn) await setActive({ session: null });
+        const result = await client.signIn.create({
+          strategy: "ticket",
+          ticket,
+        });
         if (!result.createdSessionId) throw new Error("Ticket not accepted");
         await setActive({ session: result.createdSessionId });
-        nativeMessage("AUTH_HANDOFF_COMPLETE");
         window.location.replace(target);
       } catch {
         setError("This sign-in link expired. Return to the app and try again.");

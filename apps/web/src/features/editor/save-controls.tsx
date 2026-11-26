@@ -26,7 +26,7 @@ function Controls({
   embed,
   onExportRequested,
 }: Props) {
-  const { isLoaded, isSignedIn } = useAppAuth();
+  const { isLoaded, isSignedIn, user } = useAppAuth();
   const paidExportsEnabled =
     process.env.NEXT_PUBLIC_ENABLE_PAID_EXPORTS === "true";
   const [quality, setQuality] = useState<ExportQuality>("free");
@@ -48,20 +48,14 @@ function Controls({
     useExportCreation(input, photo, initialId, quality);
 
   useEffect(() => {
-    if (
-      !embed ||
-      !isLoaded ||
-      isSignedIn ||
-      new URLSearchParams(window.location.search).get("nativeSession") !== "1"
-    )
-      return;
+    if (!embed || !isLoaded || (isSignedIn && !user?.id)) return;
     const timer = setTimeout(() => {
       window.ReactNativeWebView?.postMessage(
-        JSON.stringify({ type: "AUTH_EXPIRED" }),
+        JSON.stringify({ type: "WEB_AUTH_STATUS", userId: user?.id ?? null }),
       );
-    }, 1500);
+    }, 0);
     return () => clearTimeout(timer);
-  }, [embed, isLoaded, isSignedIn]);
+  }, [embed, isLoaded, isSignedIn, user?.id]);
   useEffect(() => {
     if (
       embed &&
@@ -136,9 +130,7 @@ function Controls({
         <button
           type="button"
           disabled={
-            invalid ||
-            busy ||
-            job.data?.status === "submission_uncertain"
+            invalid || busy || job.data?.status === "submission_uncertain"
           }
           onClick={() => exportVideo.mutate()}
           className="rounded-full bg-accent px-6 py-3 text-white disabled:opacity-50"
@@ -165,8 +157,13 @@ function Controls({
           {job.data.status === "rendering" && <p>Rendering your video…</p>}
           {job.data.status === "submission_uncertain" && (
             <div role="status" className="space-y-1">
-              <p>We could not confirm this export. Do not retry; it is being recovered.</p>
-              <p className="text-xs opacity-75">Recovery reference: {job.data.id}</p>
+              <p>
+                We could not confirm this export. Do not retry; it is being
+                recovered.
+              </p>
+              <p className="text-xs opacity-75">
+                Recovery reference: {job.data.id}
+              </p>
             </div>
           )}
           {job.data.status === "failed" && (

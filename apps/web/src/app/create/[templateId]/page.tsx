@@ -7,6 +7,8 @@ import { requireUser } from "@/server/middleware/auth";
 import { invitationService } from "@/server/modules/invitations/invitation.service";
 import { invitationDto } from "@/server/modules/invitations/invitation.mapper";
 import { siteConfig } from "@/lib/site-config";
+import { AppError } from "@/server/lib/errors";
+import { MobileAuthRequired } from "@/features/editor/mobile-auth-required";
 
 export async function generateMetadata({
   params,
@@ -52,9 +54,26 @@ export default async function CreatePage({
   const template = getTemplate(templateId);
   if (!template) notFound();
   const { draft, embed } = await searchParams;
-  const initial = draft
-    ? invitationDto(await invitationService.get(await requireUser(), draft))
-    : undefined;
+  let initial;
+  if (draft) {
+    try {
+      initial = invitationDto(
+        await invitationService.get(await requireUser(), draft),
+      );
+    } catch (error) {
+      if (
+        embed === "1" &&
+        error instanceof AppError &&
+        (error.code === "UNAUTHENTICATED" || error.code === "NOT_FOUND")
+      )
+        return error.code === "NOT_FOUND" ? (
+          <MobileAuthRequired message="This draft isn’t available to the current web account. If it belongs to your app account, your session will sync automatically; otherwise, it may have been deleted." />
+        ) : (
+          <MobileAuthRequired />
+        );
+      throw error;
+    }
+  }
   if (initial && initial.templateId !== templateId) notFound();
   return (
     <Editor
