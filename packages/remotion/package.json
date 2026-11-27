@@ -26,11 +26,11 @@
   },
   "dependencies": {
     "@greetings/shared": "workspace:*",
-    "@remotion/cli": "^4.0.540",
-    "@remotion/google-fonts": "^4.0.540",
+    "@remotion/cli": "^4.0.546",
+    "@remotion/google-fonts": "^4.0.546",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "remotion": "^4.0.540",
+    "remotion": "^4.0.546",
     "zod": "^4.6.7"
   }
 }
