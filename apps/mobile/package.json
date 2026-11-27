@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "expo-router/entry",
   "dependencies": {
-    "@clerk/expo": "^4.15.0",
+    "@clerk/expo": "^4.17.5",
     "@clerk/expo-native-components": "^0.4.7",
     "@expo-google-fonts/figtree": "0.4.1",
     "@expo-google-fonts/fraunces": "0.4.1",
